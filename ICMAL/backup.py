@@ -289,9 +289,8 @@ class IcmalReportGenerator(object):
 
             arcpy.AddMessage("Pivot dataframe was created")
 
-            # Genel toplam row added
-            # df_sum_pivot.loc['Dikey Toplam'] = df_sum.sum(axis=0)
-            # df_sum_pivot.loc[:, 'Yatay Toplam'] = df_sum.sum(axis=1)
+            df_sum.loc['Dikey Toplam'] = df_sum.sum(numeric_only=True, axis=0)
+            df_sum.loc[:, 'Yatay Toplam'] = df_sum.sum(numeric_only=True, axis=1)
 
             df_sum_pivot_html_style = df_sum_pivot.style
             df_sum_pivot_html_style.set_properties(**{'width': '600px', 'text-align': 'center'})
@@ -503,12 +502,9 @@ class IcmalReportGenerator(object):
                     df_grouped.loc['Genel Toplam'] = df_grouped.sum(numeric_only=True, axis=0)
 
                     df_grouped['PARSEL SAYISI'] = df_grouped['PARSEL SAYISI'].astype(int)
-                    df_grouped['ALAN TOPLAMI'] = df_grouped['ALAN TOPLAMI'].astype(int)
-
-                    df_grouped['PARSEL SAYISI'] = df_grouped['PARSEL SAYISI'].round(3)
                     df_grouped['ALAN TOPLAMI'] = df_grouped['ALAN TOPLAMI'].round(3)
-                    # df_grouped['ALAN TOPLAMI'] = df_grouped['ALAN TOPLAMI'].astype(str) \
-                    #     .apply(lambda x: x.replace("0", ""))
+                    df_grouped['ALAN TOPLAMI'] = df_grouped['ALAN TOPLAMI'].astype(str) \
+                        .apply(lambda x: x.replace("0", ""))
 
                     # Genel toplamlar birlestirilir. minidf'de kullanilacak.
                     maliks_toplam += toplam
@@ -522,6 +518,10 @@ class IcmalReportGenerator(object):
 
             # sorting
             all_in_one = all_in_one[['KULLANIM AMACI', 'PARSEL SAYISI', 'ALAN TOPLAMI']]
+            # all_in_one = all_in_one.append({'KULLANIM AMACI': 'İSDEMİR YERLEŞİM ALANI GENEL TOPLAM',
+            #                                 'PARSEL SAYISI': all_in_one['PARSEL SAYISI'].sum(),
+            #                                 'ALAN TOPLAMI': all_in_one['ALAN TOPLAMI'].sum()}, ignore_index=True)
+
             # all_in_one.loc['İSDEMİR YERLEŞİM ALANI GENEL TOPLAM'] = all_in_one.sum(numeric_only=True, axis=0)
 
             all_in_one.reset_index(drop=True, inplace=True)
@@ -529,7 +529,9 @@ class IcmalReportGenerator(object):
             indexes = self.find_genel_toplam_indexes(all_in_one)
             arcpy.AddMessage("Indexes has been found !")
 
-            # rendered_text = all_in_one.style.apply(self.pandas_colorizing, args=(indexes,), axis=None).render()
+            # all_in_one['PARSEL SAYISI'] = all_in_one['PARSEL SAYISI'].astype(str) \
+            #     .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
+
             all_in_one_rendered = all_in_one.style.apply(lambda x: ['background: #ff6666' if x.name in indexes
                                                                     else '' for i in x], axis=1)
             all_in_one_rendered = all_in_one_rendered.apply(
@@ -581,7 +583,7 @@ class IcmalReportGenerator(object):
                                       'rapor_malik': 'Rapor Malik', 'rapor_kullanimi': 'Rapor Kullanımı'}, inplace=True)
 
             # remove some columns
-            df_detail.drop(columns=['ILCE_ADI', ])
+            df_detail.drop(columns=['ILCE_ADI'])
             # number formatting for df detail
             df_detail['Hisse Alanı'] = df_detail['Hisse Alanı'].astype(str) \
                 .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
