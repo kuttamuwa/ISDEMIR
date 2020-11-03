@@ -820,13 +820,27 @@ class IcmalReportGenerator(object):
             df_detail_style = df_detail_style.set_properties(**{'width': '600px', 'text-align': 'left'})
             df_detail_style = df_detail_style.set_table_attributes(
                 'border="1" class=dataframe table table-hover table-bordered')
+
             df_detail_style = df_detail_style.set_table_styles(
                 [{
-                    'selector': 'th',
+                    'selector': 'td',
                     'props': [
-                        ('background-color', '#0d89a6'),
-                        ('color', 'white')]
-                }]
+                        ('vertical-align', 'top'),
+                        ('text-align', 'left')]
+                },
+                    {
+                        'selector': 'th:nth-child(19)',
+                        'props': [
+                            ('width', '40%')
+                        ]
+                    },
+                    {
+                        'selector': 'th',
+                        'props': [
+                            ('background-color', '#0d89a6'),
+                            ('color', 'white')]
+                    }
+                ]
             )
 
             arcpy.AddMessage("Detail dataframe was styled")
@@ -956,12 +970,6 @@ class IcmalReportGenerator(object):
             # number formatting
             df_detail['Ada No'] = df_detail['Ada No'].astype(str) \
                 .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
-            # df_detail['KHT ID'] = df_detail['KHT ID'].astype(str) \
-            #     .apply(lambda x: x.split(".")[0].replace(",", "") if x.count(".") else 'Kayıt Yok')
-            # df_detail['Alan Büyüklüğü'] = df_detail['Alan Büyüklüğü'].astype(str) \
-            #     .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
-            # df_detail['KHA Parsel ID'] = df_detail['KHA Parsel ID'].astype(str) \
-            #     .apply(lambda x: x.split(".")[0].replace(",", "") if x.count(".") else 'Kayıt Yok')
 
             df_detail.index.names = ['INDEX']
 
