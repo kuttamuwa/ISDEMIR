@@ -970,6 +970,10 @@ class IcmalReportGenerator(object):
             # number formatting
             df_detail['Ada No'] = df_detail['Ada No'].astype(str) \
                 .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
+            df_detail['Yıllık Ödenecek Miktar'] = df_detail['Yıllık Ödenecek Miktar'].astype(str) \
+                .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
+            df_detail['Birim Bedeli'] = df_detail['Birim Bedeli'].astype(str) \
+                .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
 
             df_detail.index.names = ['INDEX']
 
@@ -979,6 +983,8 @@ class IcmalReportGenerator(object):
             # export html
             df_detail_html = df_detail.style
             df_detail_html = df_detail_html.set_properties(**{'width': '600px', 'text-align': 'left'})
+            df_detail_html = df_detail_html.set_table_attributes(
+                'border="1" class=dataframe table table-hover table-bordered')
             df_detail_html = df_detail_html.set_table_styles(
                 [{
                     'selector': 'th',
@@ -987,6 +993,8 @@ class IcmalReportGenerator(object):
                         ('color', 'white')]
                 }]
             )
+
+            df_detail_html = df_detail_html.render()
 
             # df_detail_html = df_detail.to_html(index=True, justify='center', classes='umut-table-style')
             added_text = f"Detay tablosu sayısı : {df_detail.count()['Ada No']}"
