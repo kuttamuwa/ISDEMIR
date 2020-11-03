@@ -290,8 +290,12 @@ class IcmalReportGenerator(object):
             arcpy.AddMessage("Pivot dataframe was created")
 
             # Genel toplam row added
-            # df_sum_pivot.loc['Dikey Toplam'] = df_sum.sum(axis=0)
-            # df_sum_pivot.loc[:, 'Yatay Toplam'] = df_sum.sum(axis=1)
+            df_sum_pivot_columns = list(df_sum_pivot.columns)
+            df_sum_pivot[df_sum_pivot_columns] = df_sum_pivot[df_sum_pivot_columns].apply(pd.to_numeric, errors='raise',
+                                                                                          axis=1)
+
+            df_sum_pivot.loc['Dikey Toplam'] = df_sum_pivot.sum(axis=0)
+            df_sum_pivot.loc[:, 'Yatay Toplam'] = df_sum_pivot.sum(axis=1)
 
             df_sum_pivot_html_style = df_sum_pivot.style
             df_sum_pivot_html_style.set_properties(**{'width': '600px', 'text-align': 'center'})
@@ -375,7 +379,6 @@ class IcmalReportGenerator(object):
                                       'Emlakvergisi_durumu': 'Emlak Vergisi Durumu',
                                       'EmlakInsaatSinifi': 'Emlak İnşaat Sınıfı',
                                       }, inplace=True)
-            df_detail.loc['Genel Toplam'] = df_detail.sum(numeric_only=True, axis=0)
 
             # datetime formatting
             df_detail['Yapım Tarihi'] = pd.to_datetime(df_detail['Yapım Tarihi'], errors='coerce')
@@ -424,6 +427,12 @@ class IcmalReportGenerator(object):
             df_sum['TOPLAM (m²)'] = df_sum['TOPLAM (m²)'].astype(str) \
                 .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
 
+            # delete Kayıt Yok rows
+            df_sum = df_sum[df_sum['Emlak Vergisi Durumu'] != "Kayıt Yok"]
+
+            # Toplam column formatting
+            df_sum['TOPLAM (m²)'] = df_sum['TOPLAM (m²)'].astype(float).map('{:,.2f}'.format)
+
             df_sum_html = df_sum.style
             df_sum_html = df_sum_html.set_table_styles(
                 [{
@@ -442,7 +451,7 @@ class IcmalReportGenerator(object):
                            else '' for i in x], axis=1)
 
             # df_sum_html = df_sum.to_html(index=False, justify='center', classes='umut-table-style')
-            last_added_text = f"<h1 style='color:black;'>Yapı Detay Emlak Vergi Listesi</h1>" \
+            last_added_text = f"<h1 style='color:black;'>Yapı Emlak Vergi Listesi</h1>" \
                               f"<hr>"
 
             result_html = icmal_html + 2 * "<br>" + df_sum_html.hide_index().render() + 4 * "<br>" \
