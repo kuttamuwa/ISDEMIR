@@ -460,10 +460,6 @@ class IcmalReportGenerator(object):
         elif icmal_type == report_choice_list[2]:
             # Parsel Icmali
             pd.options.display.float_format = '{:,.3f}'.format
-            # todo: 3-5 gidecek
-            # todo: rengini ayarlamak lazım
-            # todo genel toplamların text color beyaz olacak
-            # todo: rapor malikteki satır her tablonun tepesine bomboş eklenecek
 
             arcpy.AddMessage("Parsel Icmali secildi")
             icmal_html = base_html_head.replace("{report_title}", "Parsel Icmali ")
@@ -531,7 +527,6 @@ class IcmalReportGenerator(object):
 
             # sorting
             all_in_one = all_in_one[['KULLANIM AMACI', 'PARSEL SAYISI', 'ALAN TOPLAMI']]
-            # all_in_one.loc['İSDEMİR YERLEŞİM ALANI GENEL TOPLAM'] = all_in_one.sum(numeric_only=True, axis=0)
 
             all_in_one.reset_index(drop=True, inplace=True)
 
@@ -587,10 +582,9 @@ class IcmalReportGenerator(object):
                                       'ParselNo': 'Parsel No', 'AlanBuyuklugu': 'Alan Büyüklüğü',
                                       'Kullanimsekli': 'Kullanım Şekli', 'ImarDurumu': 'İmar Durumu',
                                       'ParselMulkiyet': 'Parsel Mülkiyet', 'HisseAlani': 'Hisse Alanı',
-                                      'rapor_malik': 'Rapor Malik', 'rapor_kullanimi': 'Rapor Kullanımı'}, inplace=True)
+                                      'rapor_malik': 'Rapor Malik', 'rapor_kullanimi': 'Rapor Kullanımı',
+                                      'ILCE_ADI': 'İlçe Adı'}, inplace=True)
 
-            # remove some columns
-            df_detail.drop(columns=['ILCE_ADI', ])
             # number formatting for df detail
             df_detail['Hisse Alanı'] = df_detail['Hisse Alanı'].astype(str) \
                 .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
@@ -629,6 +623,10 @@ class IcmalReportGenerator(object):
                 {'Veri Adı': 'ISDEMIR YERLEŞİM ALANI GENEL TOPLAM', 'TOPLAM_ALAN': genel_toplam},
                 ignore_index=True)
 
+            # Toplam column formatting
+            mini_df['TOPLAM_ALAN'] = mini_df['TOPLAM_ALAN'].astype(float).map('{:,.2f}'.format)
+            maliks_toplam = '{:,.2f}'.format(maliks_toplam)
+
             # column renaming
             mini_df.rename(columns={'Veri Adı': 'ISDEMIR YERLEŞİM ALANI GENEL TOPLAM', 'TOPLAM_ALAN': maliks_toplam},
                            inplace=True)
@@ -644,7 +642,7 @@ class IcmalReportGenerator(object):
             mini_df_style = mini_df_style.set_table_attributes(
                 'border="1" class=mini-table-style')
 
-            mini_df_html = mini_df_style.render()
+            mini_df_html = mini_df_style.hide_index().render()
 
             arcpy.AddMessage("Mini df was created")
 
