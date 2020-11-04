@@ -362,7 +362,7 @@ class IcmalReportGenerator(object):
             icmal_html = base_html_head.replace("{report_title}", "Yapı Emlak Vergisi Icmali")
             name = "bina_emlak_icmali.html"
 
-            added_first_text = f"<h1 style='color:black;'>Bina Emlak Vergisi İcmali</h1>" \
+            added_first_text = f"<h1 style='color:black;'>Yapı Emlak Vergisi İcmali</h1>" \
                                f"<hr>"
             icmal_html += added_first_text
 
@@ -532,8 +532,8 @@ class IcmalReportGenerator(object):
 
                     # malik row to top
                     letters = string.ascii_uppercase
-                    malik_row = pd.DataFrame({'KULLANIM AMACI': f'{letters[cnt]}.) ' + m, 'PARSEL SAYISI': None,
-                                              'ALAN TOPLAMI': None}, index=[0])
+                    malik_row = pd.DataFrame({'KULLANIM AMACI': f'<b>{letters[cnt]}.) ' + m + '</b>',
+                                              'PARSEL SAYISI': None, 'ALAN TOPLAMI': None}, index=[0])
                     df_grouped = pd.concat([malik_row, df_grouped])
 
                     # Genel toplamlar birlestirilir. minidf'de kullanilacak.
@@ -754,6 +754,14 @@ class IcmalReportGenerator(object):
                 .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
 
             df_sum = pd.crosstab(df_detail['İlçe Adı'], df_detail['Emlak Vergisi Durumu'])
+
+            # df_cnt = pd.crosstab(df_detail['İlçe Adı'], df_detail['Emlak Vergisi Durumu'], aggfunc='count',
+            #                      values=['Payas', 'İskenderun'])
+            # df_sum2 = pd.crosstab(df_detail['İlçe Adı'], df_detail['Emlak Vergisi Durumu'], aggfunc='sum',
+            #                       values=['Payas', 'İskenderun'])
+            #
+            # df_sum3 = df_sum2.join(df_cnt)
+
             df_sum = df_sum.T
 
             # for testing
@@ -952,9 +960,9 @@ class IcmalReportGenerator(object):
             result_html = icmal_html + 2 * "<br>" + added_text + "<br>" + df_detail_style.hide_index().render()
 
         elif icmal_type == report_choice_list[6]:
-            # Kiralama Raporu
-            arcpy.AddMessage("Kiralama Raporu secildi.")
-            icmal_html = base_html_head.replace("{report_title}", "ISDEMIR Kiralama Raporu")
+            # Kiralama Icmali
+            arcpy.AddMessage("Kiralama Icmali secildi.")
+            icmal_html = base_html_head.replace("{report_title}", "ISDEMIR Kiralama Icmali")
             name = "kiralama_report.html"
 
             added_first_text = f"<h2 style='color:black;'>ISDEMIR KİRALAMALAR İCMALİ</h2>" \
@@ -964,7 +972,7 @@ class IcmalReportGenerator(object):
             clean_fields = ["kht_tip", "SozlesmeYapilanKurulus", "Yillik_OdenecekMiktar", "OdemeFormulu",
                             "BirimBedeli", "ParaBirimi", "malik",
                             "KONUSU", "ACIKLAMA", "GUNCELDURUM", "AdaNo", "PARSELNO",
-                            "KIRA_BASLANGIC_TARIHI", "KIRA_BITIS_TARIHI", "KHTNO"]
+                            "KIRA_BASLANGIC_TARIHI", "KIRA_BITIS_TARIHI", "KHTNO", "ALAN_BUYUKLUGU"]
 
             table_name = "ISD_NEW.dbo.KHT_SORGU_VW"
 
@@ -977,10 +985,11 @@ class IcmalReportGenerator(object):
                                       'KHTNO': 'KHT No', 'KHTID': 'KHT ID', 'GUNCELDURUM': 'Güncel Durum',
                                       'KIRA_BASLANGIC_TARIHI': 'Kira Başlangıç Tarihi',
                                       'KIRA_BITIS_TARIHI': 'Kira Bitiş Tarihi',
-                                      'Yillik_OdenecekMiktar': 'Yıllık Ödenecek Miktar',
+                                      'Yillik_OdenecekMiktar': 'Yıllık Ödenecek Miktar (TL/YIL)',
                                       'SozlesmeYapilanKurulus': 'Sözleşme Yapılan Kuruluş',
                                       'OdemeFormulu': 'Ödeme Formülü',
-                                      'BirimBedeli': 'Birim Bedeli', 'ParaBirimi': 'Para Birimi'},
+                                      'BirimBedeli': 'Birim Bedeli', 'ParaBirimi': 'Para Birimi',
+                                      'ALAN_BUYUKLUGU': 'İzin Yüzölçümü (m²)'},
                              inplace=True)
 
             # date formatting due to arcpy
@@ -1002,9 +1011,11 @@ class IcmalReportGenerator(object):
             # number formatting
             df_detail['Ada No'] = df_detail['Ada No'].astype(str) \
                 .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
-            df_detail['Yıllık Ödenecek Miktar'] = df_detail['Yıllık Ödenecek Miktar'].astype(str) \
+            df_detail['Yıllık Ödenecek Miktar (TL/YIL)'] = df_detail['Yıllık Ödenecek Miktar (TL/YIL)'].astype(str) \
                 .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
             df_detail['Birim Bedeli'] = df_detail['Birim Bedeli'].astype(str) \
+                .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
+            df_detail['İzin Yüzölçümü (m²)'] = df_detail['İzin Yüzölçümü (m²)'].astype(str) \
                 .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
 
             df_detail.index.names = ['INDEX']
