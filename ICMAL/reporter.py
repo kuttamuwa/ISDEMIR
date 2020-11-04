@@ -38,7 +38,7 @@ report_choice_list = ['Yerlesim Alani Genel Arazi Icmali (Yapi)',
                       'Yerlesim Alani Genel Arazi Icmali (Parsel)',
                       'Parsel Emlak Vergisi Icmali',
                       'Yapi Dava Takip Raporu',
-                      'Parsel Dava Takip Raporu (Bakimda)',
+                      'Parsel Dava Takip Raporu',
                       'Kiralama Raporu']
 # https://bootswatch.com/4/superhero/bootstrap.css
 
@@ -99,15 +99,6 @@ base_html_head = """<!DOCTYPE html>
 """
 pd.options.display.float_format = '{:,.3f}'.format
 pd.set_option('display.width', 100)
-
-
-# TODO: Musteriye soralim: KHT Ödemelerinde de sözleşme konusundan mı sorgulasın yoksa kira konusundan mı?
-# TODO: Musteriye soralim: Kiralama icmalindeki konular sözleşmeden geliyor. Böyle devam mi yoksa kira konusundan mı?
-# TODO: Parsel icmalinde DHTA-05 alanı tutmuyor.
-# TODO: Parsel icmalinde: Sanal Parseller Tepeye ve -> İsdemir Yerleşim alanı Genel Toplam ve Genel toplam
-#  html'de olmayacak, soldakinden çıkarılıp aşağıya Isdemir yerleşim alanı Genel toplam diye eklenecek.
-# TODO: Parsel icmalinde: ortadakine son bi summary row eklenecek
-# todo: tepe çizgiler yazılacak
 
 
 class Toolbox(object):
