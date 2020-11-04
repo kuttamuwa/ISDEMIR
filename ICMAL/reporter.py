@@ -512,8 +512,11 @@ class IcmalReportGenerator(object):
 
                     df_grouped['PARSEL SAYISI'] = df_grouped['PARSEL SAYISI'].round(3)
                     df_grouped['ALAN TOPLAMI'] = df_grouped['ALAN TOPLAMI'].round(3)
-                    # df_grouped['ALAN TOPLAMI'] = df_grouped['ALAN TOPLAMI'].astype(str) \
-                    #     .apply(lambda x: x.replace("0", ""))
+                    # df_grouped['KULLANIM AMACI'] = df_grouped.index
+                    #
+                    # df_grouped.loc[-1] = [m, None, None]
+                    # df_grouped.index += 1
+                    # df_grouped.sort_index(inplace=True)
 
                     # Genel toplamlar birlestirilir. minidf'de kullanilacak.
                     maliks_toplam += toplam
@@ -522,7 +525,7 @@ class IcmalReportGenerator(object):
             all_in_one = pd.concat(df_groups, join='inner', axis=0)
 
             # colorizing
-            all_in_one['KULLANIM AMACI'] = all_in_one.index
+            # all_in_one['KULLANIM AMACI'] = all_in_one.index
             all_in_one.index.names = ['INDEX']
 
             # sorting
@@ -614,8 +617,8 @@ class IcmalReportGenerator(object):
             arcpy.AddMessage(f"Genel toplam : {genel_toplam} \n "
                              f"Kalan Alan Genel Yerleşim Alanı Toplamı : {kalan_alan_gyt}")
 
-            mini_df = mini_df.append({'Veri Adı': 'Genel Toplam', 'TOPLAM_ALAN': genel_toplam},
-                                     ignore_index=True)
+            # mini_df = mini_df.append({'Veri Adı': 'Genel Toplam', 'TOPLAM_ALAN': genel_toplam},
+            #                          ignore_index=True)
             mini_df = mini_df.append(
                 {'Veri Adı': 'ISDEMIR YERLEŞİM ALANI GENEL TOPLAM', 'TOPLAM_ALAN': kalan_alan_gyt},
                 ignore_index=True)
@@ -636,7 +639,7 @@ class IcmalReportGenerator(object):
 
             mini_df_style = mini_df.style
             mini_df_style = mini_df_style.apply(
-                lambda x: ['background: #ff6666' if int(x['INDEX']) == 5 else '' for i in x], axis=1)
+                lambda x: ['background: #ff6666' if int(x['INDEX']) == 4 else '' for i in x], axis=1)
             mini_df_style.hide_columns(['INDEX'])
 
             mini_df_style = mini_df_style.set_table_attributes(
@@ -715,14 +718,6 @@ class IcmalReportGenerator(object):
             df_sum = df_sum.T
 
             # for testing
-            # todo: ya sonra yaparsın, yoruldum.
-            # df_detail['HisseAlani2'] = df_detail['Hisse Alanı']
-            # df_detail['HisseAlani2'] = df_detail['HisseAlani2'].apply(lambda x: float(x) if x != 'Kayıt Yok' else 0)
-            #
-            # df_sum_test = pd.crosstab(df_detail['İlçe Adı'], df_detail['Emlak Vergisi Durumu'], aggfunc='sum',
-            #                           margins_name='HisseAlani2')
-            # df_sum_test2 = df_sum_test.join(df_sum)
-
             df_sum.loc['Genel Toplam'] = df_sum.sum(numeric_only=True, axis=0)
             df_sum.loc[:, 'Genel Toplam'] = df_sum.sum(numeric_only=True, axis=1)
 
@@ -758,7 +753,7 @@ class IcmalReportGenerator(object):
             df_sum_html = df_sum_html.set_table_attributes(
                 'border="1" class=dataframe table table-hover table-bordered')
 
-            added_text = f"<h2 style='color:black;'>ISDEMIR PARSEL EMLAK VERGİSİ DETAY LİSTESİ</h2>" \
+            added_text = f"<h2 style='color:black;'>ISDEMIR PARSEL EMLAK VERGİSİ LİSTESİ</h2>" \
                          f"<hr>"
             added_text += f"Detay tablosu sayısı : {df_detail.count()['Ada No']}"
 
