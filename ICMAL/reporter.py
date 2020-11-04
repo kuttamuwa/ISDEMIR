@@ -4,6 +4,8 @@ from subprocess import call
 
 import arcpy
 import os
+# import bs4
+# import lxml
 
 # Esri end of added imports
 import pandas as pd
@@ -53,9 +55,10 @@ base_html_head = """<!DOCTYPE html>
 
     <style>      
       th {
-        background-color: #e75959;
+        background-color: #ea6053;
         color: white;
         font-size: 15px;
+        text-align: center;
       }
 
       .umut-table-style {
@@ -67,6 +70,7 @@ base_html_head = """<!DOCTYPE html>
       }
 
       .parcel-mini-table-style {
+          margin-left: 2px;
           font-size: 15px;
       }
 
@@ -75,10 +79,11 @@ base_html_head = """<!DOCTYPE html>
       }
 
       .mini-table-style {
-          padding-left: 5em
+          padding-left: 5em;
           font-size: 15px;
           float: left;
           margin-top: -50px;
+          margin-left: 10px;
       }
 
       .yapi-icmal-style {
@@ -89,6 +94,7 @@ base_html_head = """<!DOCTYPE html>
       }
 
       .peml-table-style {
+          margin-top: 10px;
           width: 600px;
           text-anchor: middle;
           column-width: 600px;
@@ -270,7 +276,8 @@ class IcmalReportGenerator(object):
             df_detail['RuhsatGuncelDurum'] = df_detail['RuhsatGuncelDurum'].replace(['Alınmadı'], 'RUHSAT_ALINMADI')
 
             df_detail.rename(columns={'oeb_durumu': 'OEB Durumu', 'RuhsatGuncelDurum': 'Ruhsat Durum',
-                                      'GuncelDurum': 'YKIB Durum', 'ykibedinimyontemi': 'YKIB Edinim Yöntemi'},
+                                      'GuncelDurum': 'YKIB Durum', 'ykibedinimyontemi': 'YKIB Edinim Yöntemi',
+                                      'Yapi_ID': 'Yapı ID'},
                              inplace=True)
 
             # Step 1
@@ -329,7 +336,7 @@ class IcmalReportGenerator(object):
             # index to column
             df_detail.reset_index(inplace=True)
             df_detail.rename(columns={'rowid': 'INDEX'}, inplace=True)
-            added_text = f"<h2 style='color: blue;'>İSDEMİR BİNA LİSTESİ</h2>" \
+            added_text = f"<h2 style='color: blue;'>İSDEMİR YAPI LİSTESİ</h2>" \
                          f"Detay tablosu sayısı : {df_detail.count()['Ada No']}"
             arcpy.AddMessage("Columns renaming completed")
 
@@ -417,7 +424,7 @@ class IcmalReportGenerator(object):
                 [{
                     'selector': 'th',
                     'props': [
-                        ('background-color', '#0d89a6'),
+                        ('background-color', '#2880b8'),
                         ('color', 'white')]
                 }]
             )
@@ -441,7 +448,7 @@ class IcmalReportGenerator(object):
                 [{
                     'selector': 'th',
                     'props': [
-                        ('background-color', '#0d89a6'),
+                        ('background-color', '#2880b8'),
                         ('color', 'white')]
                 }]
             )
@@ -450,12 +457,13 @@ class IcmalReportGenerator(object):
                 'border="1" class=dataframe table table-hover table-bordered')
 
             df_sum_html = df_sum_html.apply(
-                lambda x: ['background: #ff6666' if x['Emlak Vergisi Durumu'] == 'Genel Toplam'
+                lambda x: ['background: #ea6053' if x['Emlak Vergisi Durumu'] == 'Genel Toplam'
                            else '' for i in x], axis=1)
 
             # df_sum_html = df_sum.to_html(index=False, justify='center', classes='umut-table-style')
             last_added_text = f"<h1 style='color:black;'>Yapı Emlak Vergi Listesi</h1>" \
                               f"<hr>"
+            last_added_text += f"Detay tablosu sayısı : {df_detail.count()['Ada No']}"
 
             result_html = icmal_html + 2 * "<br>" + df_sum_html.hide_index().render() + 4 * "<br>" \
                           + last_added_text + df_detail_style.render()
@@ -516,6 +524,10 @@ class IcmalReportGenerator(object):
 
                     df_grouped['PARSEL SAYISI'] = df_grouped['PARSEL SAYISI'].round(3)
                     df_grouped['ALAN TOPLAMI'] = df_grouped['ALAN TOPLAMI'].round(3)
+                    df_grouped['ALAN TOPLAMI'] = df_grouped['ALAN TOPLAMI'].astype(float).map('{:,.2f}'.format)
+                    df_grouped['ALAN TOPLAMI'] = df_grouped['ALAN TOPLAMI'].astype(str) \
+                        .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
+
                     df_grouped['KULLANIM AMACI'] = df_grouped.index
 
                     # malik row to top
@@ -546,20 +558,20 @@ class IcmalReportGenerator(object):
             arcpy.AddMessage("Indexes has been found !")
 
             # rendered_text = all_in_one.style.apply(self.pandas_colorizing, args=(indexes,), axis=None).render()
-            all_in_one_rendered = all_in_one.style.apply(lambda x: ['background: #ff6666' if x.name in indexes
+            all_in_one_rendered = all_in_one.style.apply(lambda x: ['background: #ea6053' if x.name in indexes
                                                                     else '' for i in x], axis=1)
             all_in_one_rendered.apply(
                 lambda x: ['colspan: 3' if x.name in malik_indexes else '' for i in x], axis=1)
 
             all_in_one_rendered = all_in_one_rendered.apply(
-                lambda x: ['background: #ff6666' if x['KULLANIM AMACI'] == 'İSDEMİR YERLEŞİM ALANI GENEL TOPLAM'
+                lambda x: ['background: #ea6053' if x['KULLANIM AMACI'] == 'İSDEMİR YERLEŞİM ALANI GENEL TOPLAM'
                            else '' for i in x], axis=1)
 
             all_in_one_rendered = all_in_one_rendered.set_table_styles(
                 [{
                     'selector': 'th',
                     'props': [
-                        ('background-color', '#0d89a6'),
+                        ('background-color', '#2880b8'),
                         ('color', 'white')]
                 }]
             )
@@ -571,7 +583,19 @@ class IcmalReportGenerator(object):
             all_in_one_rendered = all_in_one_rendered.set_table_attributes(
                 'border="1" class=parcel-aratable-style')
             all_in_one_rendered_html = all_in_one_rendered.hide_index().render()
+
             all_in_one_rendered_html = all_in_one_rendered_html.replace('None', '')
+
+            # beatifulsoup
+            # soup = bs4.BeautifulSoup(all_in_one_rendered_html, 'lxml')
+            # tables = soup.findAll('table')
+            # aratable = [i for i in tables if i.get('class')[0] == 'parcel-aratable-style'][0]
+            # for td in aratable.find_all('td'):
+            #     if td.text == '':
+            #         td.decompose()
+            #
+            #     if td.text.count('.)'):
+            #         td.attrs['colspan'] = 3
 
             df_sums_html.append(all_in_one_rendered_html)
 
@@ -654,7 +678,7 @@ class IcmalReportGenerator(object):
 
             mini_df_style = mini_df.style
             mini_df_style = mini_df_style.apply(
-                lambda x: ['background: #ff6666' if int(x['INDEX']) == 4 else '' for i in x], axis=1)
+                lambda x: ['background: #ea6053' if int(x['INDEX']) == 4 else '' for i in x], axis=1)
             mini_df_style.hide_columns(['INDEX'])
 
             mini_df_style = mini_df_style.set_table_attributes(
@@ -669,13 +693,15 @@ class IcmalReportGenerator(object):
                 result_html += m_html
 
             # mini dataframe
-            result_html += 2 * "<br>" + mini_df_html
+            result_html += 2 * "<br>" + mini_df_html + 2 * "<br>"
 
             # detay icmalleri
-            # adding detayt todo: sonradan aşağısını eklemek lazım ama ekleyince bozuliyür.
-            last_added_text = f"<h2 style='color:black; '>İSDEMİR PARSEL DETAY LİSTESİ</h2>" \
+            # adding detay
+            last_added_text = f"<h2 style='color:black; margin-top: 800px; '>İSDEMİR PARSEL DETAY LİSTESİ</h2>" \
                               f"<hr>"
+            last_added_text += f"Detay tablosu sayısı : {df_detail.count()['Ada No']}"
 
+            result_html += last_added_text
             result_html += df_detail_html.render()
 
             arcpy.AddMessage("result was created")
@@ -688,10 +714,6 @@ class IcmalReportGenerator(object):
             arcpy.AddMessage("Parsel Emlak Vergisi Icmali secildi")
             icmal_html = base_html_head.replace("{report_title}", "Parsel Emlak Vergisi Icmali")
             name = "parsel_emlak_vergisi_icmal_report.html"
-
-            added_first_text = f"<h2 style='color:black;'>ISDEMIR YERLEŞİM ALANI GENEL ARAZİ İCMALİ</h2>" \
-                               f"<hr>"
-            icmal_html += added_first_text
 
             # table_name = "ISD_NEW.dbo.Parsel_Eml_Od_Icmal_Sorgusu"
             table_name = "ISD_NEW.DBO.ParselEmlakOdemelerIcmal_VW2"
@@ -727,6 +749,8 @@ class IcmalReportGenerator(object):
             df_detail['Hisse Alanı'] = df_detail['Hisse Alanı'].astype(str) \
                 .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
             df_detail['Arsa Birim Bedeli'] = df_detail['Arsa Birim Bedeli'].astype(str) \
+                .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
+            df_detail['Ada No'] = df_detail['Hisse Alanı'].astype(str) \
                 .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
 
             df_sum = pd.crosstab(df_detail['İlçe Adı'], df_detail['Emlak Vergisi Durumu'])
@@ -798,8 +822,10 @@ class IcmalReportGenerator(object):
                                       'KararTarihi': 'Karar Tarihi', 'KararNo': 'Karar No',
                                       'EsasNo': 'Esas No', 'DavaSonucu': 'Dava Sonucu', 'DavaDurumu': 'Dava Durumu',
                                       'DavaDegeri': 'Dava Değeri', 'ILCE_ADI': 'İlçe Adı', 'Aciklama': 'Açıklama',
-                                      'Davaci': 'Davacı', 'Davali': 'Davalı'},
+                                      'Davaci': 'Davacı', 'Davali': 'Davalı',
+                                      'adliye': 'Adliye', 'merci': 'Merci'},
                              inplace=True)
+
             df_detail.index.names = ['index']
             arcpy.AddMessage("Detail was formatted as column")
 
@@ -845,7 +871,7 @@ class IcmalReportGenerator(object):
                     {
                         'selector': 'th',
                         'props': [
-                            ('background-color', '#0d89a6'),
+                            ('background-color', '#2880b8'),
                             ('color', 'white')]
                     }
                 ]
@@ -913,7 +939,7 @@ class IcmalReportGenerator(object):
                     {
                         'selector': 'th',
                         'props': [
-                            ('background-color', '#0d89a6'),
+                            ('background-color', '#2880b8'),
                             ('color', 'white')]
                     }
                 ]
@@ -935,11 +961,10 @@ class IcmalReportGenerator(object):
                                f"<hr>"
             icmal_html += added_first_text
 
-            clean_fields = ["kht_tip", "SozlesmeAdi", "SozlesmeYapilanKurulus",
-                            "SozBasTarihi", "SozBitisTarihi", "Yillik_OdenecekMiktar", "OdemeFormulu",
+            clean_fields = ["kht_tip", "SozlesmeYapilanKurulus", "Yillik_OdenecekMiktar", "OdemeFormulu",
                             "BirimBedeli", "ParaBirimi", "malik",
                             "KONUSU", "ACIKLAMA", "GUNCELDURUM", "AdaNo", "PARSELNO",
-                            "KIRA_BASLANGIC_TARIHI", "KIRA_BITIS_TARIHI"]
+                            "KIRA_BASLANGIC_TARIHI", "KIRA_BITIS_TARIHI", "KHTNO"]
 
             table_name = "ISD_NEW.dbo.KHT_SORGU_VW"
 
@@ -952,28 +977,27 @@ class IcmalReportGenerator(object):
                                       'KHTNO': 'KHT No', 'KHTID': 'KHT ID', 'GUNCELDURUM': 'Güncel Durum',
                                       'KIRA_BASLANGIC_TARIHI': 'Kira Başlangıç Tarihi',
                                       'KIRA_BITIS_TARIHI': 'Kira Bitiş Tarihi',
-                                      'Yillik_OdenecekMiktar': 'Yıllık Ödenecek Miktar', 'SozlesmeAdi': 'Sözleşme Adı',
+                                      'Yillik_OdenecekMiktar': 'Yıllık Ödenecek Miktar',
                                       'SozlesmeYapilanKurulus': 'Sözleşme Yapılan Kuruluş',
-                                      'SozBasTarihi': 'Sözleşme Başlangıç Tarihi',
-                                      'SozBitisTarihi': 'Sözleşme Bitiş Tarihi', 'OdemeFormulu': 'Ödeme Formülü',
+                                      'OdemeFormulu': 'Ödeme Formülü',
                                       'BirimBedeli': 'Birim Bedeli', 'ParaBirimi': 'Para Birimi'},
                              inplace=True)
 
             # date formatting due to arcpy
             df_detail['Kira Başlangıç Tarihi'] = pd.to_datetime(df_detail['Kira Başlangıç Tarihi'], errors='coerce')
             df_detail['Kira Bitiş Tarihi'] = pd.to_datetime(df_detail['Kira Bitiş Tarihi'], errors='coerce')
-            df_detail['Sözleşme Başlangıç Tarihi'] = pd.to_datetime(df_detail['Sözleşme Başlangıç Tarihi'],
-                                                                    errors='coerce')
-            df_detail['Sözleşme Bitiş Tarihi'] = pd.to_datetime(df_detail['Sözleşme Bitiş Tarihi'], errors='coerce')
+            # df_detail['Sözleşme Başlangıç Tarihi'] = pd.to_datetime(df_detail['Sözleşme Başlangıç Tarihi'],
+            #                                                         errors='coerce')
+            # df_detail['Sözleşme Bitiş Tarihi'] = pd.to_datetime(df_detail['Sözleşme Bitiş Tarihi'], errors='coerce')
 
             # removing NaT values
             df_detail['Kira Başlangıç Tarihi'] = df_detail['Kira Başlangıç Tarihi'].astype(str).replace(
                 {"NaT": "Kayıt Yok"})
             df_detail['Kira Bitiş Tarihi'] = df_detail['Kira Bitiş Tarihi'].astype(str).replace({"NaT": "Kayıt Yok"})
-            df_detail['Sözleşme Başlangıç Tarihi'] = df_detail['Sözleşme Başlangıç Tarihi'].astype(str).replace(
-                {"NaT": "Kayıt Yok"})
-            df_detail['Sözleşme Bitiş Tarihi'] = df_detail['Sözleşme Bitiş Tarihi'].astype(str).replace(
-                {"NaT": "Kayıt Yok"})
+            # df_detail['Sözleşme Başlangıç Tarihi'] = df_detail['Sözleşme Başlangıç Tarihi'].astype(str).replace(
+            #     {"NaT": "Kayıt Yok"})
+            # df_detail['Sözleşme Bitiş Tarihi'] = df_detail['Sözleşme Bitiş Tarihi'].astype(str).replace(
+            #     {"NaT": "Kayıt Yok"})
 
             # number formatting
             df_detail['Ada No'] = df_detail['Ada No'].astype(str) \
@@ -997,7 +1021,7 @@ class IcmalReportGenerator(object):
                 [{
                     'selector': 'th',
                     'props': [
-                        ('background-color', '#0d89a6'),
+                        ('background-color', '#2880b8'),
                         ('color', 'white')]
                 }]
             )
