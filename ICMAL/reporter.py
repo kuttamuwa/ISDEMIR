@@ -12,6 +12,7 @@ import re
 import sys
 import warnings
 from datetime import datetime as py_datetime
+import string
 
 # disable warnings
 pd.options.mode.chained_assignment = None
@@ -219,6 +220,17 @@ class IcmalReportGenerator(object):
     @staticmethod
     def find_genel_toplam_indexes(df):
         r_c = df.loc[df['KULLANIM AMACI'] == 'Genel Toplam']['KULLANIM AMACI'].index.tolist()
+        return r_c
+
+    @staticmethod
+    def find_malik_indexes(df, maliks):
+        r_c = []
+        for index, row in df.iterrows():
+            arcpy.AddMessage(row['KULLANIM AMACI'])
+            if row['KULLANIM AMACI'] in maliks:
+                r_c.append(index)
+
+        # r_c = df.loc[df['KULLANIM AMACI'] in maliks]['KULLANIM AMACI'].index.tolist()
         return r_c
 
     def execute(self, parameters, messages):
@@ -482,6 +494,7 @@ class IcmalReportGenerator(object):
             maliks_toplam = 0
 
             df_groups = []
+            cnt = 0
 
             for m in list(maliks):
                 df_sum_malik = df_sum[df_sum['rapor_malik'] == m]
@@ -503,20 +516,24 @@ class IcmalReportGenerator(object):
 
                     df_grouped['PARSEL SAYISI'] = df_grouped['PARSEL SAYISI'].round(3)
                     df_grouped['ALAN TOPLAMI'] = df_grouped['ALAN TOPLAMI'].round(3)
-                    # df_grouped['KULLANIM AMACI'] = df_grouped.index
-                    #
-                    # df_grouped.loc[-1] = [m, None, None]
-                    # df_grouped.index += 1
-                    # df_grouped.sort_index(inplace=True)
+                    df_grouped['KULLANIM AMACI'] = df_grouped.index
+
+                    # malik row to top
+                    letters = string.ascii_uppercase
+                    malik_row = pd.DataFrame({'KULLANIM AMACI': f'{letters[cnt]}.) ' + m, 'PARSEL SAYISI': None,
+                                              'ALAN TOPLAMI': None}, index=[0])
+                    df_grouped = pd.concat([malik_row, df_grouped])
 
                     # Genel toplamlar birlestirilir. minidf'de kullanilacak.
                     maliks_toplam += toplam
                     df_groups.append(df_grouped)
 
+                    cnt += 1
+
             all_in_one = pd.concat(df_groups, join='inner', axis=0)
 
             # colorizing
-            all_in_one['KULLANIM AMACI'] = all_in_one.index
+            # all_in_one['KULLANIM AMACI'] = all_in_one.index
             all_in_one.index.names = ['INDEX']
 
             # sorting
@@ -525,11 +542,15 @@ class IcmalReportGenerator(object):
             all_in_one.reset_index(drop=True, inplace=True)
 
             indexes = self.find_genel_toplam_indexes(all_in_one)
+            malik_indexes = self.find_malik_indexes(all_in_one, maliks)
             arcpy.AddMessage("Indexes has been found !")
 
             # rendered_text = all_in_one.style.apply(self.pandas_colorizing, args=(indexes,), axis=None).render()
             all_in_one_rendered = all_in_one.style.apply(lambda x: ['background: #ff6666' if x.name in indexes
                                                                     else '' for i in x], axis=1)
+            all_in_one_rendered.apply(
+                lambda x: ['colspan: 3' if x.name in malik_indexes else '' for i in x], axis=1)
+
             all_in_one_rendered = all_in_one_rendered.apply(
                 lambda x: ['background: #ff6666' if x['KULLANIM AMACI'] == 'İSDEMİR YERLEŞİM ALANI GENEL TOPLAM'
                            else '' for i in x], axis=1)
@@ -549,7 +570,10 @@ class IcmalReportGenerator(object):
 
             all_in_one_rendered = all_in_one_rendered.set_table_attributes(
                 'border="1" class=parcel-aratable-style')
-            df_sums_html.append(all_in_one_rendered.hide_index().render())
+            all_in_one_rendered_html = all_in_one_rendered.hide_index().render()
+            all_in_one_rendered_html = all_in_one_rendered_html.replace('None', '')
+
+            df_sums_html.append(all_in_one_rendered_html)
 
             # for none rapor malik
             try:
@@ -896,7 +920,7 @@ class IcmalReportGenerator(object):
             )
 
             added_text = f"<h2 style='color:black;'>PARSEL DAVA TAKİP RAPORU</h2>" \
-                          f"<hr>"
+                         f"<hr>"
             added_text += f"Detay tablosu sayısı : {df_detail.count()['Ada No']}"
 
             result_html = icmal_html + 2 * "<br>" + added_text + "<br>" + df_detail_style.hide_index().render()
