@@ -525,7 +525,7 @@ class IcmalReportGenerator(object):
             all_in_one = pd.concat(df_groups, join='inner', axis=0)
 
             # colorizing
-            # all_in_one['KULLANIM AMACI'] = all_in_one.index
+            all_in_one['KULLANIM AMACI'] = all_in_one.index
             all_in_one.index.names = ['INDEX']
 
             # sorting
@@ -757,7 +757,7 @@ class IcmalReportGenerator(object):
                          f"<hr>"
             added_text += f"Detay tablosu sayısı : {df_detail.count()['Ada No']}"
 
-            result_html = icmal_html + 4 * "<br>" + df_sum_html.render() + 4 * "<br>" + added_text + "<br>" + df_detail_style.render()
+            result_html = icmal_html + 2 * "<br>" + df_sum_html.render() + 4 * "<br>" + added_text + "<br>" + df_detail_style.render()
 
         elif icmal_type == report_choice_list[4]:
             # Yapi Dava Takip Raporu
@@ -904,9 +904,9 @@ class IcmalReportGenerator(object):
                 ]
             )
 
-            added_text = f"Detay tablosu sayısı : {df_detail.count()['Ada No']}"
-            added_text += f"<h2 style='color:black;'>PARSEL DAVA TAKİP RAPORU</h2>" \
+            added_text = f"<h2 style='color:black;'>PARSEL DAVA TAKİP RAPORU</h2>" \
                           f"<hr>"
+            added_text += f"Detay tablosu sayısı : {df_detail.count()['Ada No']}"
 
             result_html = icmal_html + 2 * "<br>" + added_text + "<br>" + df_detail_style.hide_index().render()
 
