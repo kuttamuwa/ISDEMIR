@@ -766,7 +766,7 @@ class IcmalReportGenerator(object):
 
             # df_sum = pd.crosstab(df_detail['İlçe Adı'], df_detail['Emlak Vergisi Durumu'])
 
-            df_detail['Hisse Alanı (m2)'] = df_detail['Hisse Alanı (m2)'].astype(int)
+            df_detail['Hisse Alanı (m2)'] = df_detail['Hisse Alanı (m2)'].astype(float)
 
             # sum
             df_sum = pd.pivot_table(df_detail, index=['İlçe Adı'],
@@ -784,7 +784,8 @@ class IcmalReportGenerator(object):
 
             # merging
             df_summary = df_sum.join(df_count).stack().T
-            df_summary = df_summary.replace(np.nan, 'Kayit Yok', regex=True)
+            df_summary = df_summary.replace(np.nan, '', regex=True)
+            df_summary = df_summary.round(2)
 
             # summary rows
             df_summary.loc['Genel Toplam'] = df_summary.sum(numeric_only=True, axis=0)
