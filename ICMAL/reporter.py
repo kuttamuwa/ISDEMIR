@@ -718,8 +718,6 @@ class IcmalReportGenerator(object):
 
         elif icmal_type == report_choice_list[3]:
             # Parsel Emlak Vergisi Icmali
-            # todo: Emlak vergisi durumuna göre ilçeye gruplayarak hem adet hem de toplam bulunacak
-            # todo: crosstab(aggfunc='sum') and joined it with count one
 
             arcpy.AddMessage("Parsel Emlak Vergisi Icmali secildi")
             icmal_html = base_html_head.replace("{report_title}", "Parsel Emlak Vergisi Icmali")
@@ -768,33 +766,29 @@ class IcmalReportGenerator(object):
 
             # df_sum = pd.crosstab(df_detail['İlçe Adı'], df_detail['Emlak Vergisi Durumu'])
 
-            df_detail['Hisse Alanı (m2)'] = df_detail['Hisse Alanı (m2)'].astype(float)
+            df_detail['Hisse Alanı (m2)'] = df_detail['Hisse Alanı (m2)'].astype(int)
 
             # sum
-            df_sum = pd.pivot_table(df_detail, index=['Emlak Vergisi Durumu'],
-                                    values=['Hisse Alanı (m2)'], aggfunc=['sum'], columns=['İlçe Adı'])
+            df_sum = pd.pivot_table(df_detail, index=['İlçe Adı'],
+                                    values=['Hisse Alanı (m2)'], aggfunc=['sum'], columns=['Emlak Vergisi Durumu'])
             df_sum = df_sum.swaplevel(2, 0, axis=1)
             df_sum = df_sum.stack().reset_index(level=1, drop=True)
             df_sum.rename(columns={'Hisse Alanı (m2)': 'TOPLAM (m2)'}, inplace=True)
 
             # count
-            df_count = pd.pivot_table(df_detail, index=['Emlak Vergisi Durumu'],
-                                      values=['Hisse Alanı (m2)'], aggfunc=['count'], columns=['İlçe Adı'])
+            df_count = pd.pivot_table(df_detail, index=['İlçe Adı'],
+                                      values=['Hisse Alanı (m2)'], aggfunc=['count'], columns=['Emlak Vergisi Durumu'])
             df_count = df_count.swaplevel(2, 0, axis=1)
             df_count = df_count.stack().reset_index(level=1, drop=True)
             df_count.rename(columns={'Hisse Alanı (m2)': 'ADET'}, inplace=True)
 
             # merging
-            df_summary = df_sum.join(df_count).stack()
+            df_summary = df_sum.join(df_count).stack().T
+            df_summary = df_summary.replace(np.nan, 'Kayit Yok', regex=True)
 
-            # df_summary = df_summary.T
-
-            # for testing
-            # df_summary.loc['Genel Toplam'] = df_summary.sum(numeric_only=True, axis=0)
-            # df_summary.loc[:, 'Genel Toplam'] = df_summary.sum(numeric_only=True, axis=1)
-
-            # replace nan
-            df_summary.replace(np.nan, 'Kayıt Yok')
+            # summary rows
+            df_summary.loc['Genel Toplam'] = df_summary.sum(numeric_only=True, axis=0)
+            df_summary.loc[:, 'Genel Toplam'] = df_summary.sum(numeric_only=True, axis=1)
 
             # formatting
             df_detail.index.names = ['INDEX']
@@ -827,6 +821,8 @@ class IcmalReportGenerator(object):
             df_sum_html = df_sum_html.set_properties(**{'width': '300px', 'text-align': 'center'})
             df_sum_html = df_sum_html.set_table_attributes(
                 'border="1" class=dataframe table table-hover table-bordered')
+            df_sum_html = df_sum_html.apply(lambda x: ['background: #ea6053' if x.name == 'Genel Toplam'
+                                         else '' for i in x], axis=1)
 
             added_text = f"<h2 style='color:black;'>ISDEMIR PARSEL EMLAK VERGİSİ LİSTESİ</h2>" \
                          f"<hr>"
