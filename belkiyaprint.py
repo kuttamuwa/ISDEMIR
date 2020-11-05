@@ -1,5 +1,5 @@
-# This script takes the state of a web map in a web application 
-# (for example, included services, layer visibility settings, and client-side graphics) 
+# This script takes the state of a web map in a web application
+# (for example, included services, layer visibility settings, and client-side graphics)
 # and returns a printable page layout or basic map of the specified area of interest
 # in vector (such as pdf, svg etc.) or image (e.g. png, jpeg etc.)
 #
@@ -28,6 +28,8 @@ _defTmpltFolder = os.path.join(arcpy.GetInstallInfo()['InstallDir'],
                                r"Resources\ArcToolBox\Templates\ExportWebMapTemplates")
 _prodName = arcpy.GetInstallInfo()['ProductName']
 _isMapOnly = False
+
+mylogger = open(r"C:\YAYIN\benimlogum.txt", 'w')
 
 
 # export only map without any layout elements
@@ -67,6 +69,7 @@ def exportMap(result, outfile, outFormat):
 #
 def exportLayout(result, outfile, outFormat):
     layout = result.ArcGISProject.listLayouts()[0]
+    mylogger.write('layout : {0}'.format(layout))
 
     dpi = result.DPI
 
@@ -97,25 +100,48 @@ def exportLayout(result, outfile, outFormat):
 # export report
 # **Note**: report file (.rptx) must be in the same location where layout template files (.pagx) are stored
 def exportReport(p, reportfn, outfile):
-    arcpy.management.ExportReportToPDF("ALANREPORT", r"C:\YAYIN\projealan\projealan\Proje_Alani_ExportReportToPD.pdf",
-                                       '', 96, "BEST", "EMBED_FONTS", "COMPRESS_GRAPHICS", "ADAPTIVE",
-                                       "NO_PASSWORD_PROTECT", "*****", "ALL", '', None, None)
+    # try:
+    mylogger.write('exportReport function has been starting')
     m = p.listMaps()[0]
-    lyrs = m.listLayers("*ProjeAlani*")  # Change wildcard here to find your layer
+    lyrs = m.listLayers("*Proje*")  # Change wildcard here to find your layer
     if (len(lyrs) == 0):
         return
 
     l = lyrs[0]
-    p.importDocument(reportfn)
-    r = p.listReports()[0]
-    r.setReferenceDataSource(l)
+    mylogger.write('layer was found : {0} \n'.format(l))
+    mylogger.write('outFile : {0}'.format(outfile))
 
-    outReportFileName = generateUniqueFileName('pdf')
-    r.exportToPDF(outReportFileName)
-    pdf = arcpy.mp.PDFDocumentOpen(outfile)
-    pdf.appendPages(outReportFileName)
+    p.importDocument(reportfn)
+    mylogger.write('document was imported \n')
+    r = p.listReports()[0]
+    mylogger.write('Report was found : {0} \n'.format(r.name))
+    r.setReferenceDataSource(l)
+    mylogger.write('Data source of Report was set')
+
+    # outReportFileName = generateUniqueFileName('pdf')
+    # mylogger.write('out report file name : {0} \n'.format(outReportFileName))
+    # mylogger.close()
+
+    pdf = arcpy.mp.PDFDocumentCreate(outfile)
+    mylogger.write('pdf was created : {0}'.format(pdf))
+
+    mylogger.close()
+    r.exportToPDF(outfile)
+    # mylogger.write('Exported to pdf : {0}'.format(outReportFileName))
+
+    # pdfDoc = arcpy.mp.PDFDocumentCreate(pdfPath)
+    # mylogger.write('PDF was opened')
+
+    # pdf.appendPages(outReportFileName)
+    # mylogger.write('Appended pages')
+
     pdf.saveAndClose()
-    os.remove(outReportFileName)
+    # mylogger.write('PDF saved and closed')
+    # os.remove(outReportFileName)
+    # mylogger.write('{0} was removed'.format(outReportFileName))
+    # except Exception as err:
+    #     mylogger.write('Hataya dustu  : {0}'.format(str(err)))
+    #     mylogger.close()
 
 
 # generating a unique name for each output file
@@ -198,5 +224,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

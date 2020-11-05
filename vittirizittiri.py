@@ -1,5 +1,5 @@
-# This script takes the state of a web map in a web application 
-# (for example, included services, layer visibility settings, and client-side graphics) 
+# This script takes the state of a web map in a web application
+# (for example, included services, layer visibility settings, and client-side graphics)
 # and returns a printable page layout or basic map of the specified area of interest
 # in vector (such as pdf, svg etc.) or image (e.g. png, jpeg etc.)
 #
@@ -97,11 +97,8 @@ def exportLayout(result, outfile, outFormat):
 # export report
 # **Note**: report file (.rptx) must be in the same location where layout template files (.pagx) are stored
 def exportReport(p, reportfn, outfile):
-    arcpy.management.ExportReportToPDF("ALANREPORT", r"C:\YAYIN\projealan\projealan\Proje_Alani_ExportReportToPD.pdf",
-                                       '', 96, "BEST", "EMBED_FONTS", "COMPRESS_GRAPHICS", "ADAPTIVE",
-                                       "NO_PASSWORD_PROTECT", "*****", "ALL", '', None, None)
     m = p.listMaps()[0]
-    lyrs = m.listLayers("*ProjeAlani*")  # Change wildcard here to find your layer
+    lyrs = m.listLayers("*Proje*")  # Change wildcard here to find your layer
     if (len(lyrs) == 0):
         return
 
@@ -198,5 +195,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 

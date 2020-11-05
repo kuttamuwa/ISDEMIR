@@ -686,7 +686,7 @@ class IcmalReportGenerator(object):
 
             mini_df_style = mini_df.style
             mini_df_style = mini_df_style.apply(
-                lambda x: ['background: #ea6053' if int(x['INDEX']) == 4 else '' for i in x], axis=1)
+                lambda x: ['background: #ea6053' if int(x['INDEX']) == 3 else '' for i in x], axis=1)
             mini_df_style.hide_columns(['INDEX'])
 
             mini_df_style = mini_df_style.set_table_attributes(
@@ -705,7 +705,7 @@ class IcmalReportGenerator(object):
 
             # detay icmalleri
             # adding detay
-            last_added_text = f"<h2 style='color:black; margin-top: 850px; '>İSDEMİR PARSEL DETAY LİSTESİ</h2>" \
+            last_added_text = f"<h2 style='color:black; margin-top: 850px; '>İSDEMİR PARSEL DETAY LİSTESİ</h2>"
 
             last_added_text += f"<h2>Detay tablosu sayısı : {df_detail.count()['Ada No']} </h2>"
             last_added_text += "<hr>"
@@ -719,7 +719,6 @@ class IcmalReportGenerator(object):
             # Parsel Emlak Vergisi Icmali
             # todo: Emlak vergisi durumuna göre ilçeye gruplayarak hem adet hem de toplam bulunacak
             # todo: crosstab(aggfunc='sum') and joined it with count one
-            # todo: tarihler sadece yıl olacak
 
             arcpy.AddMessage("Parsel Emlak Vergisi Icmali secildi")
             icmal_html = base_html_head.replace("{report_title}", "Parsel Emlak Vergisi Icmali")
@@ -766,14 +765,19 @@ class IcmalReportGenerator(object):
             df_detail['Emlak Vergisi Tarihi'] = df_detail['Emlak Vergisi Tarihi'].astype(str) \
                 .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
 
-            df_sum = pd.crosstab(df_detail['İlçe Adı'], df_detail['Emlak Vergisi Durumu'])
+            # df_sum = pd.crosstab(df_detail['İlçe Adı'], df_detail['Emlak Vergisi Durumu'])
 
-            # df_cnt = pd.crosstab(df_detail['İlçe Adı'], df_detail['Emlak Vergisi Durumu'], aggfunc='count',
-            #                      values=['Payas', 'İskenderun'])
-            # df_sum2 = pd.crosstab(df_detail['İlçe Adı'], df_detail['Emlak Vergisi Durumu'], aggfunc='sum',
-            #                       values=['Payas', 'İskenderun'])
-            #
-            # df_sum3 = df_sum2.join(df_cnt)
+            df_detail['Hisse Alanı (m2)'] = df_detail['Hisse Alanı (m2)'].astype(float)
+            df_sum = pd.pivot_table(df_detail, index=['Emlak Vergisi Durumu'],
+                                    values=['İlçe Adı', 'Hisse Alanı (m2)'], aggfunc=np.sum)
+            df_sum.reset_index(inplace=True)
+
+            df_sum_test_2 = pd.pivot_table(df_detail, index=['Emlak Vergisi Durumu', 'İlçe Adı'], values=['İlçe Adı'],
+                                           aggfunc='count')
+            try:
+                df_sum_test_3 = df_detail.groupby(by=['Emlak Vergisi Durumu', 'İlçe Adı'])
+            except:
+                pass
 
             df_sum = df_sum.T
 
@@ -817,7 +821,8 @@ class IcmalReportGenerator(object):
                          f"<hr>"
             added_text += f"Detay tablosu sayısı : {df_detail.count()['Ada No']}"
 
-            result_html = icmal_html + 2 * "<br>" + df_sum_html.render() + 4 * "<br>" + added_text + "<br>" + df_detail_style.render()
+            result_html = icmal_html + 2 * "<br>" + df_sum_html.render() + 4 * "<br>" \
+                          + added_text + "<br>" + df_sum_test_2.to_html() + df_sum_test_3.to_html() + df_detail_style.render()
 
         elif icmal_type == report_choice_list[4]:
             # Yapi Dava Takip Raporu
