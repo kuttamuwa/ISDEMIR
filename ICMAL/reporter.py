@@ -623,12 +623,12 @@ class IcmalReportGenerator(object):
             df_detail.rename(columns={'parselid': 'Parsel ID', 'AdaNo': 'Ada No',
                                       'ParselNo': 'Parsel No', 'AlanBuyuklugu': 'Alan Büyüklüğü',
                                       'Kullanimsekli': 'Kullanım Şekli', 'ImarDurumu': 'İmar Durumu',
-                                      'ParselMulkiyet': 'Parsel Mülkiyet', 'HisseAlani': 'Hisse Alanı',
+                                      'ParselMulkiyet': 'Parsel Mülkiyet', 'HisseAlani': 'Hisse Alanı (m2)',
                                       'rapor_malik': 'Rapor Malik', 'rapor_kullanimi': 'Rapor Kullanımı',
                                       'ILCE_ADI': 'İlçe Adı'}, inplace=True)
 
             # number formatting for df detail
-            df_detail['Hisse Alanı'] = df_detail['Hisse Alanı'].astype(str) \
+            df_detail['Hisse Alanı (m2)'] = df_detail['Hisse Alanı (m2)'].astype(str) \
                 .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
 
             # export html
@@ -658,9 +658,9 @@ class IcmalReportGenerator(object):
 
             # mini_df = mini_df.append({'Veri Adı': 'Genel Toplam', 'TOPLAM_ALAN': genel_toplam},
             #                          ignore_index=True)
-            mini_df = mini_df.append(
-                {'Veri Adı': 'ISDEMIR YERLEŞİM ALANI GENEL TOPLAM', 'TOPLAM_ALAN': kalan_alan_gyt},
-                ignore_index=True)
+            # mini_df = mini_df.append(
+            #     {'Veri Adı': 'ISDEMIR YERLEŞİM ALANI GENEL TOPLAM', 'TOPLAM_ALAN': kalan_alan_gyt},
+            #     ignore_index=True)
             mini_df = mini_df.append(
                 {'Veri Adı': 'ISDEMIR YERLEŞİM ALANI GENEL TOPLAM', 'TOPLAM_ALAN': genel_toplam},
                 ignore_index=True)
@@ -710,6 +710,7 @@ class IcmalReportGenerator(object):
             # Parsel Emlak Vergisi Icmali
             # todo: Emlak vergisi durumuna göre ilçeye gruplayarak hem adet hem de toplam bulunacak
             # todo: crosstab(aggfunc='sum') and joined it with count one
+            # todo: tarihler sadece yıl olacak
 
             arcpy.AddMessage("Parsel Emlak Vergisi Icmali secildi")
             icmal_html = base_html_head.replace("{report_title}", "Parsel Emlak Vergisi Icmali")
@@ -740,17 +741,20 @@ class IcmalReportGenerator(object):
                                       'parselemlakaciklama': 'Parsel Emlak Açıklama',
                                       'ParselNitelik': 'Parsel Nitelik', 'Kullanimsekli': 'Kullanım Şekli',
                                       'Arsa_birim_bedeli_nereden_alind': 'Arsa Birim Bedeli Nereden Alındı',
-                                      'YapiDurumu': 'YAPI DURUMU', 'HisseAlani': 'Hisse Alanı'},
+                                      'YapiDurumu': 'YAPI DURUMU', 'HisseAlani': 'Hisse Alanı (m2)'},
                              inplace=True)
 
             # datetime formatting
             df_detail['Emlak Vergisi Tarihi'] = pd.to_datetime(df_detail['Emlak Vergisi Tarihi'], errors='coerce')
+            df_detail['Emlak Vergisi Tarihi'] = df_detail['Emlak Vergisi Tarihi'].dt.year
 
-            df_detail['Hisse Alanı'] = df_detail['Hisse Alanı'].astype(str) \
+            df_detail['Hisse Alanı (m2)'] = df_detail['Hisse Alanı (m2)'].astype(str) \
                 .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
             df_detail['Arsa Birim Bedeli'] = df_detail['Arsa Birim Bedeli'].astype(str) \
                 .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
-            df_detail['Ada No'] = df_detail['Hisse Alanı'].astype(str) \
+            df_detail['Ada No'] = df_detail['Hisse Alanı (m2)'].astype(str) \
+                .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
+            df_detail['Emlak Vergisi Tarihi'] = df_detail['Emlak Vergisi Tarihi'].astype(str) \
                 .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
 
             df_sum = pd.crosstab(df_detail['İlçe Adı'], df_detail['Emlak Vergisi Durumu'])
@@ -839,10 +843,11 @@ class IcmalReportGenerator(object):
 
             # date formatting
             df_detail['Dava Açılış Tarihi'] = pd.to_datetime(df_detail['Dava Açılış Tarihi'], errors='coerce')
-            df_detail['Dava Açılış Tarihi'] = df_detail['Dava Açılış Tarihi'].astype(str)
+            df_detail['Dava Açılış Tarihi'] = df_detail['Dava Açılış Tarihi'].dt.year
+            df_detail['Dava Açılış Tarihi'] = df_detail['Dava Açılış Tarihi'].astype(str) \
+                .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
             df_detail['Dava Açılış Tarihi'] = df_detail['Dava Açılış Tarihi'].apply(
                 lambda x: 'Kayıt Yok' if x == 'NaT' else x)
-            # df_detail['Ada No'] = df_detail['Ada No'].astype(int, errors='ignore')
             arcpy.AddMessage("Detail was formatted as date")
 
             # index to column
