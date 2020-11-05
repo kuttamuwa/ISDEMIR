@@ -68,6 +68,14 @@ base_html_head = """<!DOCTYPE html>
           font-size: 15px;
           float: left;
       }
+      
+      .parcel-detail-table-style {
+          width: 800px;
+          text-anchor: middle;
+          column-width: 600px;
+          font-size: 15px;
+          float: left;
+      }
 
       .parcel-mini-table-style {
           margin-left: 2px;
@@ -634,9 +642,9 @@ class IcmalReportGenerator(object):
             # export html
             df_detail_html = df_detail.style
             df_detail_html = df_detail_html.set_table_attributes(
-                'border="1" class=umut-table-style')
+                'border="1" class=parcel-detail-table-style')
 
-            df_detail_html = df_detail_html.set_properties(**{'width': '600px', 'height': '20px',
+            df_detail_html = df_detail_html.set_properties(**{'width': '800px', 'height': '20px',
                                                               'text-align': 'center'})
 
             # df_detail_html = df_detail.to_html(index=True, justify='center', classes='umut-table-style')
@@ -697,9 +705,10 @@ class IcmalReportGenerator(object):
 
             # detay icmalleri
             # adding detay
-            last_added_text = f"<h2 style='color:black; margin-top: 800px; '>İSDEMİR PARSEL DETAY LİSTESİ</h2>" \
-                              f"<hr>"
-            last_added_text += f"Detay tablosu sayısı : {df_detail.count()['Ada No']}"
+            last_added_text = f"<h2 style='color:black; margin-top: 850px; '>İSDEMİR PARSEL DETAY LİSTESİ</h2>" \
+
+            last_added_text += f"<h2>Detay tablosu sayısı : {df_detail.count()['Ada No']} </h2>"
+            last_added_text += "<hr>"
 
             result_html += last_added_text
             result_html += df_detail_html.render()
