@@ -305,6 +305,8 @@ class IcmalReportGenerator(object):
                                          'RUHSAT_ALINMADI': 'RUHSAT ALINMADI', 'RUHSAT_ALINDI': 'RUHSAT ALINDI',
                                          'RUHSAT_KAYITYOK': 'RUHSAT KAYDI YOK', 'YKIB_ALINMADI': 'YKIB ALINMADI'
                                          }, inplace=True)
+            # ordering OEB Durumu
+            df_sum_pivot = df_sum_pivot.reindex(columns=['İçinde', 'Dışında'], level=0)
 
             arcpy.AddMessage("Pivot dataframe was created")
 
@@ -315,6 +317,12 @@ class IcmalReportGenerator(object):
 
             df_sum_pivot.loc['Dikey Toplam'] = df_sum_pivot.sum(axis=0)
             df_sum_pivot.loc[:, 'Yatay Toplam'] = df_sum_pivot.sum(axis=1)
+
+            # İsdemir malik en tepeye alinacak.. reindexing
+            df_sum_pivot_indexes = df_sum_pivot.index.to_list()
+            df_sum_pivot_indexes.remove('İsdemir')
+            df_sum_pivot_indexes.insert(0, 'İsdemir')
+            df_sum_pivot = df_sum_pivot.reindex(df_sum_pivot_indexes)
 
             df_sum_pivot_html_style = df_sum_pivot.style
             df_sum_pivot_html_style.set_properties(**{'width': '600px', 'text-align': 'center'})
