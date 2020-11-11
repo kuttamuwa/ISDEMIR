@@ -1,226 +1,197 @@
-# This script takes the state of a web map in a web application
-# (for example, included services, layer visibility settings, and client-side graphics)
-# and returns a printable page layout or basic map of the specified area of interest
-# in vector (such as pdf, svg etc.) or image (e.g. png, jpeg etc.)
-#
-
-
-# Import required modules
-#
-import sys
-import os
 import arcpy
-import uuid
-import json
-import requests
+import os, json
+from pathlib import Path
 
-# constants
-#
-SERVER_PROD_NAME = 'Server'
-PRO_PROD_NAME = 'ArcGISPro'
-PAGX_FILE_EXT = "pagx"
-RPTX_FILE_EXT = "rptx"
-MAP_ONLY = 'map_only'
+if not arcpy.env.processorType:
+    arcpy.env.processorType == "GPU"
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    arcpy.AddMessage("GPU is being used for the training")
+elif arcpy.env.processorType == "CPU":
+    arcpy.AddMessage("CPU is being used for the training")
+elif arcpy.env.processorType == "GPU":
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    os.environ['CUDA_VISIBLE_DEVICES'] = str(arcpy.env.gpuId)
+    arcpy.AddMessage("GPU is being used for the training")
+else:
+    raise CustomCancelException("Processor type is invalid")
 
-# default location and current product name
-#
-_defTmpltFolder = os.path.join(arcpy.GetInstallInfo()['InstallDir'],
-                               r"Resources\ArcToolBox\Templates\ExportWebMapTemplates")
-_prodName = arcpy.GetInstallInfo()['ProductName']
-_isMapOnly = False
+import arcgis
+import torch
+if torch.cuda.is_available():
+    arcgis.env._processorType = arcpy.env.processorType
+    arcgis.env._gpuid = arcpy.env.gpuId
+    torch.cuda.set_device(arcpy.env.gpuId)
+import arcgis.learn
+from arcgis.learn import prepare_data
 
-mylogger = open(r"C:\YAYIN\benimlogum.txt", 'w')
+try:
+    from fastai.callback import Callback
 
+    HAS_FASTAI = True
 
-# export only map without any layout elements
-#
-def exportMap(result, outfile, outFormat):
-    mapView = result.ArcGISProject.listMaps()[0].defaultView
+except Exception as e:
+    HAS_FASTAI = False
 
-    w = result.outputSizeWidth
-    h = result.outputSizeHeight
-    dpi = int(result.DPI)  # a workaround for now for a bug
+import warnings
+from fastprogress import fastprogress
 
-    try:
-        if outFormat == "png8" or outFormat == "png32":
-            if (outFormat == "png8"):
-                colorMode = "8-BIT_ADAPTIVE_PALETTE"
-            else:
-                colorMode = "32-BIT_WITH_ALPHA"
-            mapView.exportToPNG(outfile, w, h, dpi, None, colorMode)
-        elif outFormat == "pdf":
-            mapView.exportToPDF(outfile, w, h, dpi)
-        elif outFormat == "jpg":
-            mapView.exportToJPEG(outfile, w, h, dpi, None, '24-BIT_TRUE_COLOR', 100)
-        elif outFormat == "gif":
-            mapView.exportToGIF(outfile, w, h, dpi)
-        elif outFormat == "eps":
-            mapView.exportToEPS(outfile, w, h, dpi)
-        elif outFormat == "svg":
-            mapView.exportToSVG(outfile, w, h, dpi, False)
-        elif outFormat == "svgz":
-            mapView.exportToSVG(outfile, w, h, dpi, True)
-    except Exception as err:
-        arcpy.AddError("error raised..." + str(err))
-        raise
+arcpy.env.autoCancelling = False
+fastprogress.NO_BAR = True
+warnings.filterwarnings("ignore")
 
+STRING_SSD = "SSD"
+STRING_UNET = "UNET"
+STRING_FEATURES = "FEATURE_CLASSIFIER"
+STRING_PSPNET = "PSPNET"
+STRING_RETINANET = "RETINANET"
+STRING_MASKRCNN = "MASKRCNN"
 
-# export layout
-#
-def exportLayout(result, outfile, outFormat):
-    layout = result.ArcGISProject.listLayouts()[0]
-    mylogger.write('layout : {0}'.format(layout))
+MODEL_WITH_PARAMETERS = [
+    STRING_SSD,
+    STRING_PSPNET,
+    STRING_RETINANET
+]
 
-    dpi = result.DPI
+MODEL_CLASS_MAPPING = {
+    STRING_SSD: "SingleShotDetector",
+    STRING_UNET: "UnetClassifier",
+    STRING_FEATURES: "FeatureClassifier",
+    STRING_PSPNET: "PSPNetClassifier",
+    STRING_RETINANET: "RetinaNet",
+    STRING_MASKRCNN: "MaskRCNN"
+}
 
-    try:
-        if outFormat == "png8" or outFormat == "png32":
-            if (outFormat == "png8"):
-                colorMode = "8-BIT_ADAPTIVE_PALETTE"
-            else:
-                colorMode = "32-BIT_WITH_ALPHA"
-            layout.exportToPNG(outfile, dpi, colorMode)
-        elif outFormat == "pdf":
-            layout.exportToPDF(outfile, dpi)
-        elif outFormat == "jpg":
-            layout.exportToJPEG(outfile, dpi)
-        elif outFormat == "gif":
-            layout.exportToGIF(outfile, dpi)
-        elif outFormat == "eps":
-            layout.exportToEPS(outfile, dpi)
-        elif outFormat == "svg":
-            layout.exportToSVG(outfile, dpi, False)
-        elif outFormat == "svgz":
-            layout.exportToSVG(outfile, dpi, True)
-    except Exception as err:
-        arcpy.AddError("error raised..." + str(err))
-        raise
+#BACKBONE_MODEL_MAPPING = {
+#    "RESNET34": "resnet34",
+#    "RESNET50": "resnet50"
+#}
 
 
-# export report
-# **Note**: report file (.rptx) must be in the same location where layout template files (.pagx) are stored
-def exportReport(p, reportfn, outfile):
-    # try:
-    mylogger.write('exportReport function has been starting')
-    m = p.listMaps()[0]
-    lyrs = m.listLayers("*Proje*")  # Change wildcard here to find your layer
-    if (len(lyrs) == 0):
-        return
-
-    l = lyrs[0]
-    mylogger.write('layer was found : {0} \n'.format(l))
-    mylogger.write('outFile : {0}'.format(outfile))
-
-    p.importDocument(reportfn)
-    mylogger.write('document was imported \n')
-    r = p.listReports()[0]
-    mylogger.write('Report was found : {0} \n'.format(r.name))
-    r.setReferenceDataSource(l)
-    mylogger.write('Data source of Report was set')
-
-    # outReportFileName = generateUniqueFileName('pdf')
-    # mylogger.write('out report file name : {0} \n'.format(outReportFileName))
-    # mylogger.close()
-
-    pdf = arcpy.mp.PDFDocumentCreate(outfile)
-    mylogger.write('pdf was created : {0}'.format(pdf))
-
-    mylogger.close()
-    r.exportToPDF(outfile)
-    # mylogger.write('Exported to pdf : {0}'.format(outReportFileName))
-
-    # pdfDoc = arcpy.mp.PDFDocumentCreate(pdfPath)
-    # mylogger.write('PDF was opened')
-
-    # pdf.appendPages(outReportFileName)
-    # mylogger.write('Appended pages')
-
-    pdf.saveAndClose()
-    # mylogger.write('PDF saved and closed')
-    # os.remove(outReportFileName)
-    # mylogger.write('{0} was removed'.format(outReportFileName))
-    # except Exception as err:
-    #     mylogger.write('Hataya dustu  : {0}'.format(str(err)))
-    #     mylogger.close()
+class CustomCancelException(Exception):
+    """Custom exception for geoprocessing tool cancellations"""
+    pass
 
 
-# generating a unique name for each output file
-def generateUniqueFileName(outFormat):
-    guid = str(uuid.uuid1())
-    fileName = ""
+class ProgressCallback(Callback):
 
-    if outFormat == "png8" or outFormat == "png32":
-        fileName = '{}.{}'.format(guid, "png")
+    def __init__(self, model, max_epochs, show_accuracy=True, **kwargs):
+        super().__init__()
+        self.model = model
+        self.max_epochs = max_epochs
+        self.show_accuracy = show_accuracy
+
+    def on_train_begin(self, **kwargs):
+        arcpy.AddMessage(
+            "Learning Rate - {}".format(str(self.model._learning_rate)))
+        arcpy.SetProgressor("step", "Training....")
+        message_string = "Training Loss\t\tValidation Loss"
+        if self.show_accuracy:
+            message_string = message_string + "\t\tAccuracy"
+
+        arcpy.AddMessage(message_string)
+
+    def on_epoch_begin(self, **kwargs):
+        arcpy.SetProgressorLabel("Epoch {}".format(kwargs.get('epoch') + 1))
+        percentage_completed = float(
+            kwargs.get('epoch') / self.max_epochs) * 100
+        arcpy.SetProgressorPosition(int(percentage_completed))
+
+    def on_epoch_end(self, **kwargs):
+        last_loss = kwargs.get("last_loss", "NA")
+        last_metrics = kwargs.get("last_metrics", [])
+        message_string = f"{last_loss}\t{last_metrics[0]}"
+
+        if self.show_accuracy:
+            accuracy = last_metrics[1] if len(last_metrics) > 1 else "NA"
+            message_string = message_string + f"\t\t{accuracy}"
+
+        arcpy.AddMessage(message_string)
+        if arcpy.env.isCancelled:
+            raise CustomCancelException('Tool has been cancelled')
+
+
+def execute():
+    if not HAS_FASTAI:
+        raise Exception(
+            'fast.ai (version 1.0.54 or above) librarie is not installed. Install it using "conda install fastai=1.0.54".')
+
+    """The source code of the tool."""
+    in_folder = arcpy.GetParameterAsText(0)
+    out_folder = arcpy.GetParameterAsText(1)
+    max_epochs = int(arcpy.GetParameterAsText(2))
+    model_type = MODEL_CLASS_MAPPING.get(arcpy.GetParameterAsText(3))
+    batch_size = int(arcpy.GetParameterAsText(4))
+    arguments = arcpy.GetParameter(5)
+    learning_rate = float(abs(arcpy.GetParameter(6))) if arcpy.GetParameter(
+        6) else None
+    backbone_model = arcpy.GetParameterAsText(7)
+    pretrained_model = arcpy.GetParameterAsText(8) if arcpy.GetParameterAsText(
+        8) else None
+    validation_percentage = (
+                float(arcpy.GetParameter(9)) / 100) if arcpy.GetParameter(
+        9) else None
+    stop_training = arcpy.GetParameter(10)
+    freeze = arcpy.GetParameter(12)
+
+    # Prepare Data
+    prepare_data_kwargs = {'batch_size': batch_size}
+    if validation_percentage:
+        prepare_data_kwargs['val_split_pct'] = validation_percentage
+
+    arcpy.AddMessage(f"prepare data kwargs : {prepare_data_kwargs}")
+    data_bunch = prepare_data(in_folder, **prepare_data_kwargs)
+
+    # SSD model does not support show accuracy
+    if arcpy.GetParameterAsText(3) == STRING_SSD:
+        show_accuracy = False
     else:
-        fileName = '{}.{}'.format(guid, outFormat)
+        show_accuracy = True
 
-    fullFileName = os.path.join(arcpy.env.scratchFolder, fileName)
-    return fullFileName
+    if not pretrained_model:
+        kwargs = {}
+        if arcpy.GetParameterAsText(3) in MODEL_WITH_PARAMETERS:
+            for arg_index in range(arguments.rowCount):
+                arg_pair = arguments.getRow(arg_index).split('\'')
+                for each in arg_pair:
+                    if not each.strip():
+                        arg_pair.remove(each)
+                if arg_pair[1]:
+                    kwargs[arg_pair[0]] = eval(arg_pair[1])
 
+        #kwargs['backbone'] = BACKBONE_MODEL_MAPPING.get(backbone_model)
+        kwargs['backbone'] = backbone_model.lower()
 
-# Main module
-#
-def main():
-    # Get the value of the input parameter
-    #
-    WebMap_as_JSON = arcpy.GetParameterAsText(0)
-    outfilename = arcpy.GetParameterAsText(1)
-    format = arcpy.GetParameterAsText(2).lower()
-    layoutTemplatesFolder = arcpy.GetParameterAsText(3).strip()
-    layoutTemplate = arcpy.GetParameterAsText(4).lower()
-    report = arcpy.GetParameterAsText(5).lower()
+        # Create Training Model Object
+        training_model = getattr(arcgis.learn, model_type)
+        training_model_object = training_model(data_bunch, **kwargs)
 
-    if (layoutTemplate.lower() == MAP_ONLY):
-        _isMapOnly = True
-        layoutTemplate = None
     else:
-        _isMapOnly = False
+        # Use pretrained_model parameters to override user provided parameters if there is any
+        with open(pretrained_model) as pt_in:
+            pt = json.load(pt_in)
+        model_type = pt['ModelName']
+        training_model = getattr(arcgis.learn, model_type)
+        training_model_object = training_model.from_model(pretrained_model, data_bunch)
 
-    # Special logic while being executed in ArcGIS Pro
-    # - so that a Geoprocessing result can be acquired without needing any json to begin to feed in
-    # - this is to make the publishing experience easier
-    if (WebMap_as_JSON == '#'):
-        if (_prodName == PRO_PROD_NAME):
-            return
-        elif (_prodName == SERVER_PROD_NAME):
-            arcpy.AddIDMessage('ERROR', 590, 'WebMap_as_JSON')
-        else:
-            arcpy.AddIDMessage('ERROR', 120004, _prodName)
+    # If Freeze option is unchecked, the layers in the backbone is also updated
+    if not freeze:
+        training_model_object.unfreeze()
 
-    # generate a new output filename when the output_filename parameter is empty or the script is running on server
-    if outfilename.isspace() or _prodName == SERVER_PROD_NAME:
-        outfilename = generateUniqueFileName(format)
+    training_model_object.fit(
+        epochs=max_epochs,
+        lr=learning_rate,
+        early_stopping=stop_training,
+        callbacks=[ProgressCallback(training_model_object, max_epochs,
+                                    show_accuracy=show_accuracy)]
+    )
 
-    # constructing the full path for the layout file (.pagx)
-    if not _isMapOnly:
-        # use the default location when Layout_Templates_Folder parameter is not set
-        tmpltFolder = _defTmpltFolder if not layoutTemplatesFolder else layoutTemplatesFolder
-        layoutTemplate = os.path.join(tmpltFolder, '{}.{}'.format(layoutTemplate, PAGX_FILE_EXT))
-        reportFilePath = os.path.join(tmpltFolder, '{}.{}'.format(report, RPTX_FILE_EXT))
+    arcpy.SetProgressorLabel("Training Completed")
+    arcpy.SetProgressorPosition(100)
 
-    # Convert the webmap to a map document
-    try:
-        result = arcpy.mp.ConvertWebMapToArcGISProject(WebMap_as_JSON, layoutTemplate)
-
-        # Export...
-        if (_isMapOnly):
-            if (result.outputSizeWidth == 0) or (result.outputSizeHeight == 0):
-                arcpy.AddIDMessage('ERROR', 1305)
-            exportMap(result, outfilename, format)
-        else:
-            exportLayout(result, outfilename, format)
-            if format == "pdf":
-                exportReport(result.ArcGISProject, reportFilePath, outfilename)
-            else:
-                arcpy.AddWarning("Can't generate when output format is anything but pdf.")
-
-    except Exception as err:
-        arcpy.AddError(str(err))
-
-    # Set output parameter
-    #
-    arcpy.SetParameterAsText(1, outfilename)
+    arcpy.ResetProgressor()
+    # Save object
+    training_model_object.save(out_folder)
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    execute()

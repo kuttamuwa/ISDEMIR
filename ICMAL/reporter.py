@@ -247,6 +247,14 @@ class IcmalReportGenerator(object):
         # r_c = df.loc[df['KULLANIM AMACI'] in maliks]['KULLANIM AMACI'].index.tolist()
         return r_c
 
+    @staticmethod
+    def ada_parsel_merger(df):
+        # todo: dataframe'in ada ve parsel sütunlarını birleştirir.
+        # todo: tarihler için:
+        # tüm tarih sütunlarında sadece yıl olanlarda (ör. 2012-01-01) yıl alınır. Ay ve gün doldurulduysa bırakılır.
+
+        pass
+
     def execute(self, parameters, messages):
         workspace = r"C:\YAYIN\cbsarcgisew.sde"
         env.workspace = workspace
@@ -423,6 +431,7 @@ class IcmalReportGenerator(object):
             pd.options.display.float_format = '{:,.0f}'.format
 
             # record formatting
+            df_detail['Yapım Tarihi'] = df_detail['Yapım Tarihi'].dt.year
             df_detail['Yapım Tarihi'] = df_detail['Yapım Tarihi'].astype(str)
             df_detail['Yapım Tarihi'] = df_detail['Yapım Tarihi'].apply(lambda x: "Kayıt Yok" if x == "NaT" else x)
 
@@ -487,6 +496,8 @@ class IcmalReportGenerator(object):
 
         elif icmal_type == report_choice_list[2]:
             # Parsel Icmali
+            # todo: AlanBuyuklugu: TAKBIL'deki HisseAlani sütunundan gelecek
+
             pd.options.display.float_format = '{:,.3f}'.format
 
             arcpy.AddMessage("Parsel Icmali secildi")
@@ -763,8 +774,6 @@ class IcmalReportGenerator(object):
             df_detail['Emlak Vergisi Tarihi'] = pd.to_datetime(df_detail['Emlak Vergisi Tarihi'], errors='coerce')
             df_detail['Emlak Vergisi Tarihi'] = df_detail['Emlak Vergisi Tarihi'].dt.year
 
-            df_detail['Hisse Alanı (m2)'] = df_detail['Hisse Alanı (m2)'].astype(str) \
-                .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
             df_detail['Arsa Birim Bedeli'] = df_detail['Arsa Birim Bedeli'].astype(str) \
                 .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
             df_detail['Ada No'] = df_detail['Hisse Alanı (m2)'].astype(str) \
@@ -790,10 +799,13 @@ class IcmalReportGenerator(object):
             df_count = df_count.stack().reset_index(level=1, drop=True)
             df_count.rename(columns={'Hisse Alanı (m2)': 'ADET'}, inplace=True)
 
+            df_detail['Hisse Alanı (m2)'] = df_detail['Hisse Alanı (m2)'].astype(str) \
+                .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
+
             # merging
             df_summary = df_sum.join(df_count).stack().T
             df_summary = df_summary.replace(np.nan, '', regex=True)
-            df_summary = df_summary.round(2)
+            df_summary = df_summary.astype(str).str.zfill(4)
 
             # summary rows
             df_summary.loc['Genel Toplam'] = df_summary.sum(numeric_only=True, axis=0)
@@ -831,7 +843,7 @@ class IcmalReportGenerator(object):
             df_sum_html = df_sum_html.set_table_attributes(
                 'border="1" class=dataframe table table-hover table-bordered')
             df_sum_html = df_sum_html.apply(lambda x: ['background: #ea6053' if x.name == 'Genel Toplam'
-                                         else '' for i in x], axis=1)
+                                                       else '' for i in x], axis=1)
 
             added_text = f"<h2 style='color:black;'>ISDEMIR PARSEL EMLAK VERGİSİ LİSTESİ</h2>" \
                          f"<hr>"
