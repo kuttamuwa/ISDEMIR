@@ -450,6 +450,7 @@ class IcmalReportGenerator(object):
                         ('color', 'white')]
                 }]
             )
+            df_detail_style_html = df_detail_style.render().replace('None', '')
 
             df_summary['Adet Sayısı'] = df_summary['Adet Sayısı'].astype(float).map('{:,.0f}'.format)
             df_summary['Toplam (m²)'] = df_summary['Toplam (m²)'].astype(float).map('{:,.2f}'.format)
@@ -481,7 +482,7 @@ class IcmalReportGenerator(object):
             last_added_text += f"Toplam Kayıt Sayısı : {df_detail_toplam_kayit}"
 
             result_html = icmal_html + 2 * "<br>" + df_sum_html.hide_index().render() + 4 * "<br>" \
-                          + last_added_text + df_detail_style.render()
+                          + last_added_text + df_detail_style_html
 
         elif icmal_type == report_choice_list[2]:
             # Parsel Icmali
