@@ -514,6 +514,7 @@ class IcmalReportGenerator(object):
             arcpy.AddMessage("Summary and Detail Dataframe were created")
 
             df_summary.rename(columns={'Eski_Parsel_ID': 'parselid'}, inplace=True)
+
             # rapor malik ve rapor kullanim sutunlarinin Parselden detaya aktarilmasi
             df_detail = df_detail.join(df_summary, lsuffix='_caller', rsuffix='_other')
             df_detail.drop(columns=[i for i in list(df_detail.columns) if i.count('caller') or i.count('other')],
@@ -749,9 +750,6 @@ class IcmalReportGenerator(object):
             df_detail = self.table_to_data_frame(table_name)
             df_detail = df_detail[[i for i in df_detail.columns if i not in clean_fields]]
 
-            # formatting
-            df_detail = df_detail.replace(np.nan, 'Kayit Yok', regex=True)
-
             df_detail.rename(columns={'AdaNo': 'Ada No', 'ParselNo': 'Parsel No',
                                       'KullanimSekli': 'Kullanım Şekli', 'ILCE_ADI': 'İlçe Adı',
                                       'EmlakVergisiDurumu': 'Emlak Vergisi Durumu',
@@ -767,11 +765,9 @@ class IcmalReportGenerator(object):
 
             # datetime formatting
             df_detail['Emlak Vergisi Tarihi'] = pd.to_datetime(df_detail['Emlak Vergisi Tarihi'], errors='coerce')
-            df_detail['Emlak Vergisi Tarihi'] = df_detail['Emlak Vergisi Tarihi'].dt.year
+            df_detail['Emlak Vergisi Tarihi'] = df_detail['Emlak Vergisi Tarihi'].dt.year.astype(float).map('{:.0f}'.format)
 
-            # df_sum = pd.crosstab(df_detail['İlçe Adı'], df_detail['Emlak Vergisi Durumu'])
-
-            df_detail['Hisse Alanı (m2)'] = df_detail['Hisse Alanı (m2)'].astype(float)
+            df_detail['Arsa Birim Bedeli'] = df_detail['Arsa Birim Bedeli'].astype(float).map('{:,.2f}'.format)
 
             # sum
             df_sum = pd.pivot_table(df_detail, index=['İlçe Adı'],
@@ -787,12 +783,9 @@ class IcmalReportGenerator(object):
             df_count = df_count.stack().reset_index(level=1, drop=True)
             df_count.rename(columns={'Hisse Alanı (m2)': 'ADET'}, inplace=True)
 
-            df_detail['Hisse Alanı (m2)'] = df_detail['Hisse Alanı (m2)'].astype(str) \
-                .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
-
             # merging
             df_summary = df_sum.join(df_count).stack().T
-            df_summary = df_summary.replace(np.nan, '', regex=True)
+            df_summary = df_summary.replace(np.nan, 0, regex=True)
 
             # summary rows
             df_summary.loc['Genel Toplam'] = df_summary.sum(numeric_only=True, axis=0)
@@ -805,9 +798,14 @@ class IcmalReportGenerator(object):
             df_detail.index.name = None
 
             # Ada Parsel
+            df_detail['Ada No'] = df_detail['Ada No'].astype(float, errors='ignore').map('{:.0f}'.format)
+
+            # Ada Parsel and Formatting
             df_detail_kayit_sayisi = df_detail.count()['Ada No']
             df_detail = self.ada_parsel_merger(df_detail)
-            # df_detail.drop(['Ada No', 'Parsel No'], inplace=True)
+            df_detail = df_detail.replace('nan', '', regex=True)
+            df_detail = df_detail.replace('None', '', regex=True)
+            df_detail['Hisse Alanı (m2)'] = df_detail['Hisse Alanı (m2)'].astype(float).map('{:,.2f}'.format)
 
             # export html
             df_detail_style = df_detail.style
@@ -829,10 +827,13 @@ class IcmalReportGenerator(object):
                     }
                 ]
             )
+            df_detail_style_html = df_detail_style.render()
+            df_detail_style_html = df_detail_style_html.replace('None', '')
 
-            # summary revising
-            # df_summary.astype(float).
+            # 00 issue
+            pd.set_option("display.precision", 2)
 
+            # to html
             df_sum_html = df_summary.style
             df_sum_html = df_sum_html.set_properties(**{'width': '300px', 'text-align': 'center'})
             df_sum_html = df_sum_html.set_table_attributes(
@@ -845,7 +846,7 @@ class IcmalReportGenerator(object):
             added_text += f"Toplam Kayıt Sayısı : {df_detail_kayit_sayisi}"
 
             result_html = icmal_html + 2 * "<br>" + df_sum_html.render() + 4 * "<br>" \
-                          + added_text + "<br>" + df_detail_style.render()
+                          + added_text + "<br>" + df_detail_style_html
 
         elif icmal_type == report_choice_list[4]:
             # Yapi Dava Takip Raporu
