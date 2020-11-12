@@ -68,7 +68,7 @@ base_html_head = """<!DOCTYPE html>
           font-size: 15px;
           float: left;
       }
-      
+
       .parcel-detail-table-style {
           width: 800px;
           text-anchor: middle;
@@ -404,15 +404,15 @@ class IcmalReportGenerator(object):
             df_summary = self.table_to_data_frame("ISD_NEW.dbo.YAPI_EML_ICMAL_VW")
 
             # formatting for values
-            df_detail = df_detail.replace(np.nan, 'Kayıt Yok', regex=True)
+            # df_detail = df_detail.replace(np.nan, 'Kayıt Yok', regex=True)
 
             df_summary.loc['Genel Toplam'] = df_summary.sum(numeric_only=True, axis=0)
-            df_summary.index.names = ['Sıra No']
+            df_summary.index.names = ['INDEX']
 
             # formatting for columns
             df_summary.rename(columns={'Emlakvergisi_durumu': 'Emlak Vergisi Durumu', 'TOPLAM': 'Adet Sayısı',
                                        'TOPLAM_INSAAT_ALAN': 'Toplam (m²)'}, inplace=True)
-            df_summary = df_summary.replace(np.nan, 'Genel Toplam', regex=True)
+            # df_summary = df_summary.replace(np.nan, 'Genel Toplam', regex=True)
 
             df_detail.rename(columns={'yapi_no': 'Yapı No', 'YapiAdi': 'Yapı Adı', 'AdaNo': 'Ada No',
                                       'ParselNo': 'Parsel No', 'katsayisi': 'Kat Sayısı', 'yapimtarihi': 'Yapım Tarihi',
@@ -430,14 +430,14 @@ class IcmalReportGenerator(object):
             df_detail.sort_values('Yapı No', inplace=True)
 
             # number formatting
-            df_detail['Ada No'] = df_detail['Ada No'].astype(str) \
-                .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
-            df_detail['Toplam İnşaat Alanı (m²)'] = df_detail['Toplam İnşaat Alanı (m²)'].astype(str) \
-                .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
-            df_detail['Kat Sayısı'] = df_detail['Kat Sayısı'].astype(str) \
-                .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
-            df_detail['Emlak İnşaat Sınıfı'] = df_detail['Emlak İnşaat Sınıfı'].astype(str) \
-                .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
+            # df_detail['Ada No'] = df_detail['Ada No'].astype(str) \
+            #     .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
+            # df_detail['Toplam İnşaat Alanı (m²)'] = df_detail['Toplam İnşaat Alanı (m²)'].astype(str) \
+            #     .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
+            # df_detail['Kat Sayısı'] = df_detail['Kat Sayısı'].astype(str) \
+            #     .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
+            # df_detail['Emlak İnşaat Sınıfı'] = df_detail['Emlak İnşaat Sınıfı'].astype(str) \
+            #     .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
 
             pd.options.display.float_format = '{:,.0f}'.format
 
@@ -447,7 +447,7 @@ class IcmalReportGenerator(object):
             df_detail['Yapım Tarihi'] = df_detail['Yapım Tarihi'].apply(lambda x: "Kayıt Yok" if x == "NaT" else x)
 
             # delete index row
-            df_detail.index.names = ['Sıra No']
+            # df_detail.index.names = ['Sıra No']
 
             # delete Malik
             df_detail.drop(columns=['Malik'], inplace=True)
@@ -467,7 +467,7 @@ class IcmalReportGenerator(object):
             )
 
             # delete index row
-            df_summary.index.names = ['Sıra No']
+            # df_summary.index.names = ['Sıra No']
 
             # df_summary['Adet Sayısı'] = df_summary['Adet Sayısı'].astype(str) \
             #     .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
@@ -481,7 +481,7 @@ class IcmalReportGenerator(object):
             df_summary['Toplam (m²)'] = df_summary['Toplam (m²)'].astype(float).map('{:,.2f}'.format)
 
             # Emlak Vergisi Index sorting
-            df_summary = df_summary.reindex(['Verilen', 'Verilecek', 'İnşaatı Devam Ediyor', 'Muaf'])
+            # df_summary = df_summary.reindex(['Verilen', 'Verilecek', 'İnşaatı Devam Ediyor', 'Muaf'])
 
             # styling
             df_sum_html = df_summary.style
