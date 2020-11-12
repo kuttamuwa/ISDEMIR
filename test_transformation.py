@@ -18,13 +18,15 @@ transformer = Transformer.from_crs(src_crs, target_crs)
 
 # mxd setting
 # tüm katmanlar aprx'e aktarılır
-aprx = arcpy.mp.ArcGISProject("CURRENT")
-
+# aprx = arcpy.mp.ArcGISProject("CURRENT")
+# map = aprx.listMaps("*")[0]  # one map
+# arcpy.AddMessage(f"Map was selected : {map.name}")
+# layers = map.listLayers()
 
 # editing session
 edit = arcpy.da.Editor(env_path)
-edit.startEditing(False, True)
-edit.startOperation()
+edit.startEditing(True, False)
+# edit.startOperation()
 
 # sample_x, sample_y = 12519133.878038634, 4066382.0430306355
 for fc in arcpy.ListFeatureClasses("*"):
@@ -46,5 +48,5 @@ for fc in arcpy.ListFeatureClasses("*"):
     except Exception as err:
         arcpy.AddMessage("{0} feature classinda hata aldik : {1}".format(fc, str(err)))
 
-edit.stopOperation()
+# edit.stopOperation()
 edit.stopEditing(True)
