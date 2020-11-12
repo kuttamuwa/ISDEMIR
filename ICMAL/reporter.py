@@ -947,7 +947,7 @@ class IcmalReportGenerator(object):
             icmal_html = base_html_head.replace("{report_title}", "Parsel Dava Takip Raporu ")
             name = "parsel_dava_takip_report.html"
 
-            clean_fields = ["p_oid", "parselid", "AlanBuyuklugu", "ParselNitelik", "KullanimSekli", "ImarDurumu",
+            clean_fields = ["p_oid", "parselid", "AlanBuyuklugu", "ParselNitelik", "ImarDurumu",
                             "ParselMulkiyet", "Malik", "parselaciklama", "davadegeribirimi", "rowid",
                             "shape.STArea()", "shape.STLength()"]
 
@@ -955,7 +955,6 @@ class IcmalReportGenerator(object):
             df_detail = df_detail[[i for i in df_detail.columns if i not in clean_fields]]
 
             # formatting
-            df_detail = df_detail.replace(np.nan, 'Kayıt Yok', regex=True)
             df_detail = df_detail.drop(labels=['p_oid'], errors='ignore')
 
             # specific column formatting
@@ -964,15 +963,26 @@ class IcmalReportGenerator(object):
                                       'esasno': 'Esas No', 'kararno': 'Karar No', 'karartarihi': 'Karar Tarihi',
                                       'davadurumu': 'Dava Durumu', 'davasonucu': 'Dava Sonucu',
                                       'davadegeri': 'Dava Degeri', 'davaci': 'Davacı', 'davali': 'Davalı',
-                                      'hukukaciklama': 'Hukuki Açıklama'}, inplace=True)
+                                      'hukukaciklama': 'Hukuki Açıklama', 'rowid': 'Sıra No', 'adliye': 'Adliye',
+                                      'merci': 'Merci', 'davano': 'Dava No', 'davakonusu': 'Dava Konusu'},
+                             inplace=True)
             arcpy.AddMessage("DF Detail is ready")
 
             # index to column
             df_detail.reset_index(inplace=True)
-            df_detail.rename(columns={'index': 'INDEX'}, inplace=True)
+            df_detail.index.names = ['Sıra No']
 
-            # export html
-            # df_detail.index.names = ['INDEX']
+            # formatting values
+            df_detail['Dava Açılış Tarihi'] = df_detail['Dava Açılış Tarihi'].dt.strftime('%Y-%m-%d')
+
+            # Ada Parsel
+            df_detail_kayit_sayisi = df_detail.count()['Ada No']
+            df_detail['Ada No'] = df_detail['Ada No'].astype(float).map('{:.0f}'.format)
+
+            df_detail = self.ada_parsel_merger(df_detail)
+            df_detail.reset_index()
+            df_detail.index.names = ['Sıra No']
+            df_detail.drop(columns=['Ada No', 'Parsel No', 'rowid'], inplace=True)
 
             df_detail_style = df_detail.style
             df_detail_style = df_detail_style.set_properties(**{'width': '600px', 'text-align': 'left'})
@@ -1000,12 +1010,13 @@ class IcmalReportGenerator(object):
                     }
                 ]
             )
+            df_detail_style_html = df_detail_style.render().replace('nan', '').replace('None', '')
 
             added_text = f"<h2 style='color:black;'>PARSEL DAVA TAKİP RAPORU</h2>" \
                          f"<hr>"
-            added_text += f"Toplam Kayıt Sayısı : {df_detail.count()['Ada No']}"
+            added_text += f"Toplam Kayıt Sayısı : {df_detail_kayit_sayisi}"
 
-            result_html = icmal_html + 2 * "<br>" + added_text + "<br>" + df_detail_style.hide_index().render()
+            result_html = icmal_html + 2 * "<br>" + added_text + "<br>" + df_detail_style_html
 
         elif icmal_type == report_choice_list[6]:
             # Kiralama Icmali
