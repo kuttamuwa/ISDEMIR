@@ -248,7 +248,7 @@ class IcmalReportGenerator(object):
         return r_c
 
     @staticmethod
-    def ada_parsel_merger(df, adafield='Ada No', parselfield='Parsel No', mergerfield='AdaParsel'):
+    def ada_parsel_merger(df, adafield='Ada No', parselfield='Parsel No', mergerfield='Ada Parsel'):
         df[mergerfield] = df[[adafield, parselfield]].apply(lambda row: '-'.join(row.values.astype(str)), axis=1)
         return df
 
@@ -379,18 +379,8 @@ class IcmalReportGenerator(object):
             result_html = icmal_html + "<br>" + df_sum_pivot_html_style.render() + 2 * "<br>" + added_text + df_detail_html
 
         elif icmal_type == report_choice_list[1]:
-            # Yapi Emlak Vergisi Icmali : YAPI_EML_ICMAL_VW
-            # Yapı No'ya göre sorting (TESTED)
-            # Toplan İnşaat Alanı m2 (TESTED)
             # todo: Yapı Adı sütunu sola dayalı
-            # todo: Yapım yılında sadece yıl (BITTI *)
-            # todo: Mini icmal daraltılacak (BITTI)
-            # Adet sayısı ve Toplam Pascal case  (TESTED)
-            # Genel toplam bold (TESTED)
             # todo: Sırası -> Verilen, verilecek, inşaatı devam ediyor, muaf, İlişkisiz (BITTI)
-            # Toplam Kayıt Sayısı -> rename: Toplam Kayıt Sayısı  (TESTED)
-            # İlişkisiz (TESTED)
-            # index ismi açık ve adı "Sıra No" (TESTED)
 
             arcpy.AddMessage("Yapi Emlak Icmali secildi.")
             icmal_html = base_html_head.replace("{report_title}", "Yapı Emlak Vergisi Icmali")
@@ -421,10 +411,9 @@ class IcmalReportGenerator(object):
                                       'EmlakInsaatSinifi': 'Emlak İnşaat Sınıfı',
                                       }, inplace=True)
 
-            # df_detail = df_detail.fillna('')
             df_detail['Ada No'] = df_detail['Ada No'].astype(float).map('{:,.0f}'.format)
             df_detail['Kat Sayısı'] = df_detail['Kat Sayısı'].astype(float).map('{:,.0f}'.format)
-            df_detail['Toplam İnşaat Alanı (m²)'] = df_detail['Toplam İnşaat Alanı (m²)'].astype(float).map('{:,.0f}'.format)
+            df_detail['Toplam İnşaat Alanı (m²)'] = df_detail['Toplam İnşaat Alanı (m²)'].astype(float).map('{:,.2f}'.format)
             df_detail['Emlak İnşaat Sınıfı'] = df_detail['Emlak İnşaat Sınıfı'].astype(float).map('{:,.0f}'.format)
 
             # datetime formatting
@@ -432,8 +421,6 @@ class IcmalReportGenerator(object):
 
             # sorting
             df_detail.sort_values('Yapı No', inplace=True)
-
-            # pd.options.display.float_format = '{:,.0f}'.format
 
             # record formatting
             df_detail['Yapım Tarihi'] = pd.to_numeric(df_detail['Yapım Tarihi'].dt.year,
@@ -498,9 +485,16 @@ class IcmalReportGenerator(object):
 
         elif icmal_type == report_choice_list[2]:
             # Parsel Icmali
-            # todo: AlanBuyuklugu: TAKBIL'deki HisseAlani sütunundan gelecek
-
-            pd.options.display.float_format = '{:,.3f}'.format
+            # TESTED : Detay tablosu sayısı yerine Toplam Kayıt Sayısı yazmaldır.
+            # TESTED : BITTI ParselNitelik alanı Parsel Nitelik olarak yazılmalıdır.
+            # TESTED : Ada / Parsel şekildeki gibi birleştirilmelidir.
+            # TESTED : Ada No da bulunan .0000 değerleri kaldırılmalıdır.
+            # TESTED : Rowid alanı kaldırılmalıdır. Sıra No yazılmalıdır. Parseller için sıralamanın
+            # hangi sutündan olacağı belirtilmemiştir.
+            # TESTED : BITTI Kayıt yok değerleri boş olmalıdır.
+            # todo : YARI BITTI Parsel Sayısı ve Alan Toplamı alanları daraltılmalıdır. Alan toplamında m2 yazılmalıdır.
+            # todo : Parsel icmalinde alan büyüklükleri İsdemir hisse alanından hesaplanacaktır.
+            #  İsdemir A.Ş. bu alanı her zaman güncelleyecektir.
 
             arcpy.AddMessage("Parsel Icmali secildi")
             icmal_html = base_html_head.replace("{report_title}", "Parsel Icmali ")
@@ -550,13 +544,7 @@ class IcmalReportGenerator(object):
                     df_grouped.loc['Genel Toplam'] = df_grouped.sum(numeric_only=True, axis=0)
 
                     df_grouped['PARSEL SAYISI'] = df_grouped['PARSEL SAYISI'].astype(int)
-                    df_grouped['ALAN TOPLAMI'] = df_grouped['ALAN TOPLAMI'].astype(int)
-
-                    df_grouped['PARSEL SAYISI'] = df_grouped['PARSEL SAYISI'].round(3)
-                    df_grouped['ALAN TOPLAMI'] = df_grouped['ALAN TOPLAMI'].round(3)
                     df_grouped['ALAN TOPLAMI'] = df_grouped['ALAN TOPLAMI'].astype(float).map('{:,.2f}'.format)
-                    df_grouped['ALAN TOPLAMI'] = df_grouped['ALAN TOPLAMI'].astype(str) \
-                        .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
 
                     df_grouped['KULLANIM AMACI'] = df_grouped.index
 
@@ -573,13 +561,13 @@ class IcmalReportGenerator(object):
                     cnt += 1
 
             all_in_one = pd.concat(df_groups, join='inner', axis=0)
-
             # colorizing
             # all_in_one['KULLANIM AMACI'] = all_in_one.index
             all_in_one.index.names = ['INDEX']
 
             # sorting
             all_in_one = all_in_one[['KULLANIM AMACI', 'PARSEL SAYISI', 'ALAN TOPLAMI']]
+            all_in_one.rename(columns={'ALAN TOPLAMI': 'ALAN TOPLAMI (m²)'}, inplace=True)
 
             all_in_one.reset_index(drop=True, inplace=True)
 
@@ -649,17 +637,27 @@ class IcmalReportGenerator(object):
                 arcpy.AddWarning("Rapor icin bos kayitli malikler cikarilamadi.")
 
             # formatting
-            df_detail = df_detail.replace(np.nan, 'Kayit Yok', regex=True)
+            # df_detail = df_detail.replace(np.nan, '', regex=True)
             df_detail.rename(columns={'parselid': 'Parsel ID', 'AdaNo': 'Ada No',
                                       'ParselNo': 'Parsel No', 'AlanBuyuklugu': 'Alan Büyüklüğü',
                                       'Kullanimsekli': 'Kullanım Şekli', 'ImarDurumu': 'İmar Durumu',
                                       'ParselMulkiyet': 'Parsel Mülkiyet', 'HisseAlani': 'Hisse Alanı (m2)',
                                       'rapor_malik': 'Rapor Malik', 'rapor_kullanimi': 'Rapor Kullanımı',
-                                      'ILCE_ADI': 'İlçe Adı'}, inplace=True)
+                                      'ILCE_ADI': 'İlçe Adı', 'ParselNitelik': 'Parsel Nitelik'}, inplace=True)
+            df_detail['Ada No'] = df_detail['Ada No'].astype(float).map('{:,.0f}'.format)
+            df_detail = self.ada_parsel_merger(df_detail)
 
             # number formatting for df detail
-            df_detail['Hisse Alanı (m2)'] = df_detail['Hisse Alanı (m2)'].astype(str) \
-                .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
+            df_detail['Hisse Alanı (m2)'] = df_detail['Hisse Alanı (m2)'].astype(float).map('{:,.2f}'.format)
+
+            # drop columns
+            df_detail_toplam_kayit = df_detail.count()['Ada No']
+            df_detail.drop(columns=['Ada No', 'Parsel No'], inplace=True)
+            df_detail = df_detail.replace('nan', '', regex=True)
+            df_detail = df_detail.replace('None', '', regex=True)
+            df_detail = df_detail.fillna('')
+
+            df_detail.index.names = ['Sıra No']
 
             # export html
             df_detail_html = df_detail.style
@@ -685,12 +683,6 @@ class IcmalReportGenerator(object):
             kalan_alan_gyt = float(maliks_toplam) - genel_toplam
             arcpy.AddMessage(f"Genel toplam : {genel_toplam} \n "
                              f"Kalan Alan Genel Yerleşim Alanı Toplamı : {kalan_alan_gyt}")
-
-            # mini_df = mini_df.append({'Veri Adı': 'Genel Toplam', 'TOPLAM_ALAN': genel_toplam},
-            #                          ignore_index=True)
-            # mini_df = mini_df.append(
-            #     {'Veri Adı': 'ISDEMIR YERLEŞİM ALANI GENEL TOPLAM', 'TOPLAM_ALAN': kalan_alan_gyt},
-            #     ignore_index=True)
             mini_df = mini_df.append(
                 {'Veri Adı': 'ISDEMIR YERLEŞİM ALANI GENEL TOPLAM', 'TOPLAM_ALAN': genel_toplam},
                 ignore_index=True)
@@ -729,7 +721,7 @@ class IcmalReportGenerator(object):
             # adding detay
             last_added_text = f"<h2 style='color:black; margin-top: 850px; '>İSDEMİR PARSEL DETAY LİSTESİ</h2>"
 
-            last_added_text += f"<h2>Toplam Kayıt Sayısı : {df_detail.count()['Ada No']} </h2>"
+            last_added_text += f"<h2>Toplam Kayıt Sayısı : {df_detail_toplam_kayit} </h2>"
             last_added_text += "<hr>"
 
             result_html += last_added_text
