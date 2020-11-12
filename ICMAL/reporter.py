@@ -446,7 +446,9 @@ class IcmalReportGenerator(object):
 
             # delete Malik
             df_detail_toplam_kayit = df_detail.count()['Ada No']
-            df_detail.drop(columns=['Malik', 'Sıra No', 'Ada No', 'Parsel No'], inplace=True)
+            df_detail.drop(columns=['Malik', 'Ada No', 'Parsel No'], inplace=True)
+
+            df_detail = df_detail.replace('nan', '', regex=True)
 
             # export html
             df_detail_style = df_detail.style
@@ -461,9 +463,6 @@ class IcmalReportGenerator(object):
                         ('color', 'white')]
                 }]
             )
-
-            # delete index row
-            df_summary.index.names = ['Sıra No']
 
             df_summary['Adet Sayısı'] = df_summary['Adet Sayısı'].astype(float).map('{:,.0f}'.format)
             df_summary['Toplam (m²)'] = df_summary['Toplam (m²)'].astype(float).map('{:,.2f}'.format)
