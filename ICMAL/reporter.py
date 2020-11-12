@@ -380,16 +380,16 @@ class IcmalReportGenerator(object):
 
         elif icmal_type == report_choice_list[1]:
             # Yapi Emlak Vergisi Icmali : YAPI_EML_ICMAL_VW
-            # todo: Yapı Adı sütunu sola dayalı
             # Yapı No'ya göre sorting (TESTED)
-            # todo : Toplan İnşaat Alanı m2 (BITTI)
+            # Toplan İnşaat Alanı m2 (TESTED)
+            # todo: Yapı Adı sütunu sola dayalı
             # todo: Yapım yılında sadece yıl (BITTI *)
             # todo: Mini icmal daraltılacak (BITTI)
             # Adet sayısı ve Toplam Pascal case  (TESTED)
-            # todo: Genel toplam bold (BITTI)
-            # todo: Sırası -> Verilen, verilecek, inşaatı devam ediyor, muaf (BITTI)
+            # Genel toplam bold (TESTED)
+            # todo: Sırası -> Verilen, verilecek, inşaatı devam ediyor, muaf, İlişkisiz (BITTI)
             # Toplam Kayıt Sayısı -> rename: Toplam Kayıt Sayısı  (TESTED)
-            # todo: İlişkisiz (TESTED)
+            # İlişkisiz (TESTED)
             # index ismi açık ve adı "Sıra No" (TESTED)
 
             arcpy.AddMessage("Yapi Emlak Icmali secildi.")
@@ -408,6 +408,7 @@ class IcmalReportGenerator(object):
 
             df_summary.loc['Genel Toplam'] = df_summary.sum(numeric_only=True, axis=0)
             df_summary = df_summary.replace(np.nan, 'Genel Toplam', regex=True)
+            df_summary = df_summary.replace('Iliskisiz', 'İlişkisiz', regex=True)
             df_summary.index.names = ['INDEX']
 
             # formatting for columns
@@ -439,15 +440,14 @@ class IcmalReportGenerator(object):
             # df_detail['Emlak İnşaat Sınıfı'] = df_detail['Emlak İnşaat Sınıfı'].astype(str) \
             #     .apply(lambda x: x.split(".")[0] if x.count(".") else 'Kayıt Yok')
 
-            pd.options.display.float_format = '{:,.0f}'.format
+            # pd.options.display.float_format = '{:,.0f}'.format
 
             # record formatting
             df_detail['Yapım Tarihi'] = df_detail['Yapım Tarihi'].dt.year
-            df_detail['Yapım Tarihi'] = df_detail['Yapım Tarihi'].astype(str)
-            df_detail['Yapım Tarihi'] = df_detail['Yapım Tarihi'].apply(lambda x: "Kayıt Yok" if x == "NaT" else x)
 
             # delete index row
-            # df_detail.index.names = ['Sıra No']
+            df_detail.index.names = ['Sıra No']
+            df_detail.reset_index(inplace=True)
 
             # delete Malik
             df_detail.drop(columns=['Malik'], inplace=True)
@@ -479,7 +479,7 @@ class IcmalReportGenerator(object):
             # df_summary['Toplam (m²)'] = df_summary['Toplam (m²)'].astype(float).map('{:,.2f}'.format)
 
             # Emlak Vergisi Index sorting
-            # df_summary = df_summary.reindex(['Verilen', 'Verilecek', 'İnşaatı Devam Ediyor', 'Muaf'])
+            # df_summary = df_summary.reindex(['Verilen', 'Verilecek', 'İnşaatı Devam Ediyor', 'Muaf', 'İlişkisiz'])
 
             # styling
             df_sum_html = df_summary.style
@@ -491,7 +491,7 @@ class IcmalReportGenerator(object):
                         ('color', 'white')]
                 }]
             )
-            df_sum_html = df_sum_html.set_properties(**{'width': '450px', 'text-align': 'center'})
+            df_sum_html = df_sum_html.set_properties(**{'width': '200px', 'text-align': 'center'})
             df_sum_html = df_sum_html.set_table_attributes(
                 'border="1" class=dataframe table table-hover table-bordered')
 
