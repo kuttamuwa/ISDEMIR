@@ -260,6 +260,8 @@ class IcmalReportGenerator(object):
 
         if icmal_type == report_choice_list[0]:
             # Yapi Icmali: Yapi_Geo_Icmal_Sorgusu (Detay) - Summary
+            # todo : Yapı icmalinde bulunan OEB durumları ilişkiden değil yapı katmanındaki herhangi bir sütundan elde edilmelidir. Ya da İsdemir A.Ş. bu durumu güncellemelidir.
+
             arcpy.AddMessage("Yapi Icmali secildi")
             icmal_html = base_html_head.replace("{report_title}", "Yerlesim Alani Genel Arazi Icmali (Yapi) ")
             name = "yapi_icmali.html"
@@ -302,7 +304,8 @@ class IcmalReportGenerator(object):
             df_summary.loc[df_summary['YKIB Edinim Yöntemi'] == 'İmar Barışı', 'YKIB Durum'] = 'İmar Barışı'
             df_sum_pivot = pd.crosstab(df_summary['Malik'], columns=[df_summary['OEB Durumu'],
                                                                      df_summary['Ruhsat Durum'],
-                                                                     df_summary['YKIB Durum']])
+                                                                     df_summary['YKIB Durum'],
+                                                                     df_summary['YKIB Edinim Yöntemi']], dropna=False)
 
             df_sum_pivot.rename(columns={'rowid': 'INDEX', 'disinda': 'Dışında', 'icinde': 'İçinde',
                                          'YKIB_ALINDI': 'YKIB ALINDI', 'YKIB_KAYITYOK': 'YKIB KAYDI YOK',
@@ -332,6 +335,7 @@ class IcmalReportGenerator(object):
             df_sum_pivot_html_style.set_properties(**{'width': '600px', 'text-align': 'center'})
             df_sum_pivot_html_style = df_sum_pivot_html_style.set_table_attributes(
                 'border="1" class=dataframe table table-hover table-bordered')
+            df_sum_pivot_html_style_rendered = df_sum_pivot_html_style.render().replace('YKIB', 'YKİB')
 
             # Last step
             df_detail.rename(columns={'YapiAdi': 'Yapı Adı', 'Yapi_No': 'Yapı No',
@@ -364,7 +368,8 @@ class IcmalReportGenerator(object):
                 '{:,.2f}'.format)
 
             df_detail = self.ada_parsel_merger(df_detail)
-            # df_detail.drop(['Ada No', 'Parsel No'], inplace=True)
+            df_detail.sort_values(['Yapı No'], inplace=True)
+            df_detail.drop(['Ada No', 'Parsel No'], inplace=True)
 
             # export html
             df_detail_style = df_detail.style
@@ -372,11 +377,12 @@ class IcmalReportGenerator(object):
             df_detail_style = df_detail_style.set_table_attributes(
                 'border="1" class=dataframe table table-hover table-bordered')
 
-            df_detail_html = df_detail_style.hide_index().render().replace('NaT',
-                                                                           '').replace('None', '').replace('nan', '')
+            df_detail_html = df_detail_style.hide_index().render().\
+                replace('NaT','').replace('None', '').replace('nan', '').replace('YKIB', 'YKİB')
             arcpy.AddMessage("Detail dataframe was created")
 
-            result_html = icmal_html + "<br>" + df_sum_pivot_html_style.render() + 2 * "<br>" + added_text + df_detail_html
+            result_html = icmal_html + "<br>" + df_sum_pivot_html_style_rendered + 2 * "<br>" + added_text + df_detail_html
+            result_html = result_html.replace('icinde', 'İçinde').replace('disinda', 'Dışında')
 
         elif icmal_type == report_choice_list[1]:
             # Yapi Emlak Vergisi Icmali
