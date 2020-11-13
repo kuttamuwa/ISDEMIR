@@ -511,16 +511,20 @@ class IcmalReportGenerator(object):
                             "HisseOrani", "oeb_durumu", "rowid", "SHAPE.STArea()", "SHAPE.STLength()"]
 
             df_detail = self.table_to_data_frame("ISD_NEW.dbo.Parsel_Geo_Icmal_Sorgu")
-            df_summary = self.table_to_data_frame("ISD_NEW.dbo.PARSEL", input_fields=['AlanBuyuklugu', 'Eski_Parsel_ID',
-                                                                                      'rapor_malik', 'rapor_kullanimi'])
+            df_summary = self.table_to_data_frame("ISD_NEW.dbo.PARSEL_ICMALI_VW",
+                                                  input_fields=['AlanBuyuklugu', 'Eski_Parsel_ID',
+                                                                'rapor_malik', 'rapor_kullanimi', 'HisseAlani'])
             arcpy.AddMessage("Summary and Detail Dataframe were created")
 
             df_summary.rename(columns={'Eski_Parsel_ID': 'parselid'}, inplace=True)
 
             # rapor malik ve rapor kullanim sutunlarinin Parselden detaya aktarilmasi
             df_detail = df_detail.join(df_summary, lsuffix='_caller', rsuffix='_other')
-            df_detail.drop(columns=[i for i in list(df_detail.columns) if i.count('caller') or i.count('other')],
-                           inplace=True)
+
+            df_detail.drop(
+                columns=[i for i in list(df_detail.columns) if i.count('caller') or i.count('other')],
+                inplace=True)
+
             arcpy.AddMessage("Detay icmaline rapor_malik ve rapor_kullanim sütunları aktarıldı ")
 
             df_detail = df_detail[[i for i in df_detail.columns if i not in clean_fields]]
@@ -537,8 +541,8 @@ class IcmalReportGenerator(object):
 
                 if m is not None:
                     grouped = df_sum_malik.groupby('rapor_kullanimi')
-                    df_grouped = pd.DataFrame({'PARSEL SAYISI': grouped.count()['AlanBuyuklugu'],
-                                               'ALAN TOPLAMI': grouped.sum()['AlanBuyuklugu']})
+                    df_grouped = pd.DataFrame({'PARSEL SAYISI': grouped.count()['HisseAlani'],
+                                               'ALAN TOPLAMI': grouped.sum()['HisseAlani']})
 
                     df_grouped.index.names = [m]
 
@@ -645,14 +649,14 @@ class IcmalReportGenerator(object):
             df_detail.rename(columns={'parselid': 'Parsel ID', 'AdaNo': 'Ada No',
                                       'ParselNo': 'Parsel No', 'AlanBuyuklugu': 'Alan Büyüklüğü',
                                       'Kullanimsekli': 'Kullanım Şekli', 'ImarDurumu': 'İmar Durumu',
-                                      'ParselMulkiyet': 'Parsel Mülkiyet', 'HisseAlani': 'Hisse Alanı (m2)',
+                                      'ParselMulkiyet': 'Parsel Mülkiyet', 'HisseAlani_caller': 'Hisse Alanı (m2)',
                                       'rapor_malik': 'Rapor Malik', 'rapor_kullanimi': 'Rapor Kullanımı',
                                       'ILCE_ADI': 'İlçe Adı', 'ParselNitelik': 'Parsel Nitelik'}, inplace=True)
             df_detail['Ada No'] = df_detail['Ada No'].astype(float).map('{:,.0f}'.format)
             df_detail = self.ada_parsel_merger(df_detail)
 
             # number formatting for df detail
-            df_detail['Hisse Alanı (m2)'] = df_detail['Hisse Alanı (m2)'].astype(float).map('{:,.2f}'.format)
+            df_detail['HisseAlani'] = df_detail['HisseAlani'].astype(float).map('{:,.2f}'.format)
 
             # drop columns
             df_detail_toplam_kayit = df_detail.count()['Ada No']
@@ -1061,8 +1065,8 @@ class IcmalReportGenerator(object):
             df_detail['Kira Bitiş Tarihi'] = pd.to_datetime(df_detail['Kira Bitiş Tarihi'],
                                                             errors='coerce').dt.strftime('%d-%m-%Y')
 
-            df_detail.reset_index()
             df_detail.index.names = ['Sıra No']
+            df_detail.reset_index()
 
             # values formatting
             df_detail['Ada No'] = df_detail['Ada No'].astype(float).map('{:.0f}'.format)
