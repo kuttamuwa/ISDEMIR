@@ -247,8 +247,8 @@ class IcmalReportGenerator(object):
         return r_c
 
     @staticmethod
-    def ada_parsel_merger(df, adafield='Ada No', parselfield='Parsel No', mergerfield='Ada Parsel'):
-        df[mergerfield] = df[[adafield, parselfield]].apply(lambda row: '-'.join(row.values.astype(str)), axis=1)
+    def ada_parsel_merger(df, adafield='Ada No', parselfield='Parsel No', mergerfield='Ada Parsel', sep='-'):
+        df[mergerfield] = df[[adafield, parselfield]].apply(lambda row: sep.join(row.values.astype(str)), axis=1)
         return df
 
     def execute(self, parameters, messages):
@@ -520,11 +520,6 @@ class IcmalReportGenerator(object):
 
             # rapor malik ve rapor kullanim sutunlarinin Parselden detaya aktarilmasi
             df_detail = df_detail.join(df_summary, lsuffix='_caller', rsuffix='_other')
-
-            df_detail.drop(
-                columns=[i for i in list(df_detail.columns) if i.count('caller') or i.count('other')],
-                inplace=True)
-
             arcpy.AddMessage("Detay icmaline rapor_malik ve rapor_kullanim sütunları aktarıldı ")
 
             df_detail = df_detail[[i for i in df_detail.columns if i not in clean_fields]]
@@ -645,18 +640,22 @@ class IcmalReportGenerator(object):
                 arcpy.AddWarning("Rapor icin bos kayitli malikler cikarilamadi.")
 
             # formatting
-            # df_detail = df_detail.replace(np.nan, '', regex=True)
+            df_detail = df_detail.loc[:, ~df_detail.columns.duplicated()]
+            df_detail['Hisse Alanı (m2)'] = df_detail['HisseAlani_other']
+            df_detail.drop(columns=[i for i in df_detail.columns if i.count('other') or i.count('caller')],
+                           inplace=True)
+
             df_detail.rename(columns={'parselid': 'Parsel ID', 'AdaNo': 'Ada No',
                                       'ParselNo': 'Parsel No', 'AlanBuyuklugu': 'Alan Büyüklüğü',
                                       'Kullanimsekli': 'Kullanım Şekli', 'ImarDurumu': 'İmar Durumu',
-                                      'ParselMulkiyet': 'Parsel Mülkiyet', 'HisseAlani_caller': 'Hisse Alanı (m2)',
+                                      'ParselMulkiyet': 'Parsel Mülkiyet',
                                       'rapor_malik': 'Rapor Malik', 'rapor_kullanimi': 'Rapor Kullanımı',
                                       'ILCE_ADI': 'İlçe Adı', 'ParselNitelik': 'Parsel Nitelik'}, inplace=True)
             df_detail['Ada No'] = df_detail['Ada No'].astype(float).map('{:,.0f}'.format)
             df_detail = self.ada_parsel_merger(df_detail)
 
             # number formatting for df detail
-            df_detail['HisseAlani'] = df_detail['HisseAlani'].astype(float).map('{:,.2f}'.format)
+            df_detail['Hisse Alanı (m2)'] = df_detail['Hisse Alanı (m2)'].astype(float).map('{:,.2f}'.format)
 
             # drop columns
             df_detail_toplam_kayit = df_detail.count()['Ada No']
@@ -781,14 +780,14 @@ class IcmalReportGenerator(object):
                                     values=['Hisse Alanı (m2)'], aggfunc=['sum'], columns=['Emlak Vergisi Durumu'])
             df_sum = df_sum.swaplevel(2, 0, axis=1)
             df_sum = df_sum.stack().reset_index(level=1, drop=True)
-            df_sum.rename(columns={'Hisse Alanı (m2)': 'TOPLAM (m2)'}, inplace=True)
+            df_sum.rename(columns={'Hisse Alanı (m2)': 'Toplam (m2)'}, inplace=True)
 
             # count
             df_count = pd.pivot_table(df_detail, index=['İlçe Adı'],
                                       values=['Hisse Alanı (m2)'], aggfunc=['count'], columns=['Emlak Vergisi Durumu'])
             df_count = df_count.swaplevel(2, 0, axis=1)
             df_count = df_count.stack().reset_index(level=1, drop=True)
-            df_count.rename(columns={'Hisse Alanı (m2)': 'ADET'}, inplace=True)
+            df_count.rename(columns={'Hisse Alanı (m2)': 'Adet'}, inplace=True)
 
             # merging
             df_summary = df_sum.join(df_count).stack().T
@@ -897,7 +896,7 @@ class IcmalReportGenerator(object):
             arcpy.AddMessage("Detail was formatted as index")
 
             # number formatting
-            df_detail['Dava Değeri'] = df_detail['Dava Değeri'].astype(float, errors='ignore').map('{:.0f}'.format)
+            df_detail['Dava Değeri'] = df_detail['Dava Değeri'].astype(float, errors='ignore').map('{:,.2f}'.format)
             arcpy.AddMessage("Dava degeri and Ada No was formatted")
 
             # Ada Parsel
@@ -950,6 +949,8 @@ class IcmalReportGenerator(object):
 
         elif icmal_type == report_choice_list[5]:
             # Parsel Dava Takip Raporu
+            # todo : Parsel Dava Takip İcmalinde de Karar tarihi "Gün - Ay - Yıl" olacak. Bunu o jira kaydına ekle
+            # todo        ""       ""        ""            Dava değeri : thousand seperator
             arcpy.AddMessage("Parsel Dava Takip Raporu secildi.")
             icmal_html = base_html_head.replace("{report_title}", "Parsel Dava Takip Raporu ")
             name = "parsel_dava_takip_report.html"
@@ -1028,6 +1029,10 @@ class IcmalReportGenerator(object):
 
         elif icmal_type == report_choice_list[6]:
             # Kiralama Icmali
+            # Son Yıla Ait Ödeme, ve Son Ödeme Yılı (sadece dt.year) diye iki tane sütun açılacak ve
+            # buradaki değerler ödeme tablosundaki ilişkili sözleşmelerin kiralama, irtifak ecrimisil vs.
+            # değerlerini getirecek. Yılı da yine ödemeden getirilecek.
+
             arcpy.AddMessage("Kiralama Icmali secildi.")
             icmal_html = base_html_head.replace("{report_title}", "Kiralama Icmali")
             name = "kiralama_report.html"
@@ -1077,6 +1082,10 @@ class IcmalReportGenerator(object):
 
             # kayit sayisi
             df_detail_kayit_sayisi = df_detail.count()['Ada No']
+
+            # Ada Parsel
+            df_detail = self.ada_parsel_merger(df_detail, sep='/')
+            df_detail.drop(columns=['Ada No', 'Parsel No'], inplace=True)
 
             # sorting
             df_detail.sort_values(['Kira İzin Durumu', 'KHT No'], inplace=True)
