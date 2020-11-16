@@ -263,13 +263,12 @@ class IcmalReportGenerator(object):
             # Sıra noyu tepeye almayı burada başardık
             # todo : Yapı icmalinde bulunan OEB durumları ilişkiden değil yapı katmanındaki
             #  herhangi bir sütundan elde edilmelidir. Ya da İsdemir A.Ş. bu durumu güncellemelidir.
-            # todo: Yapı icmalindeki YKIB alındı sütununda imar barışı, encümen kararı ve YKIB kırılımları eklenmelidir.
 
             arcpy.AddMessage("Yapi Icmali secildi")
             icmal_html = base_html_head.replace("{report_title}", "Yerlesim Alani Genel Arazi Icmali (Yapi) ")
             name = "yapi_icmali.html"
 
-            added_first_text = f"<h2 style='color:black;'>ISDEMIR YERLEŞİM ALANI GENEL ARAZİ İCMALİ</h2>" \
+            added_first_text = f"<h2 style='color:black;'>İsdemir Yerleşim Alanı Genel Arazi İcmali</h2>" \
                                f"<hr>"
             icmal_html += added_first_text
 
@@ -395,11 +394,11 @@ class IcmalReportGenerator(object):
             icmal_html = base_html_head.replace("{report_title}", "Yapı Emlak Vergisi Icmali")
             name = "bina_emlak_icmali.html"
 
-            added_first_text = f"<h1 style='color:black;'>Yapı Emlak Vergisi İcmali</h1>" \
+            added_first_text = f"<h1 style='color:black;'>İsdemir Yapı Emlak Vergisi İcmali</h1>" \
                                f"<hr>"
             icmal_html += added_first_text
 
-            df_detail = self.table_to_data_frame("ISD_NEW.dbo.Yapi_Geo_Eml_Od_Icmal_Sorgu")
+            df_detail = self.table_to_data_frame("ISD_NEW.dbo.YAPI_EMLAK_ICMAL_VW")
             df_summary = self.table_to_data_frame("ISD_NEW.dbo.YAPI_EML_ICMAL_VW")
 
             df_summary.loc['Genel Toplam'] = df_summary.sum(numeric_only=True, axis=0)
@@ -535,7 +534,7 @@ class IcmalReportGenerator(object):
             icmal_html = base_html_head.replace("{report_title}", "Parsel Icmali ")
             name = "parsel_icmal_report.html"
 
-            added_first_text = f"<h2 style='color:black;'>ISDEMIR YERLEŞİM ALANI GENEL ARAZİ İCMALİ</h2>" \
+            added_first_text = f"<h2 style='color:black;'>İsdemir Yerleşim Alanı Genel Arazi İcmali</h2>" \
                                f"<hr>"
             icmal_html += added_first_text
 
@@ -568,8 +567,12 @@ class IcmalReportGenerator(object):
 
                 if m is not None:
                     grouped = df_sum_malik.groupby('rapor_kullanimi')
-                    df_grouped = pd.DataFrame({'PARSEL SAYISI': grouped.count()['HisseAlani'],
-                                               'ALAN TOPLAMI': grouped.sum()['HisseAlani']})
+                    if m == 'ISDEMIR_PARSELLERI':
+                        df_grouped = pd.DataFrame({'PARSEL SAYISI': grouped.count()['HisseAlani'],
+                                                   'ALAN TOPLAMI': grouped.sum()['HisseAlani']})
+                    else:
+                        df_grouped = pd.DataFrame({'PARSEL SAYISI': grouped.count()['AlanBuyuklugu'],
+                                                   'ALAN TOPLAMI': grouped.sum()['AlanBuyuklugu']})
 
                     df_grouped.index.names = [m]
 
@@ -756,7 +759,7 @@ class IcmalReportGenerator(object):
                 result_html += m_html
 
             # mini dataframe
-            result_html += 2 * "<br>" + mini_df_html + 2 * "<br>"
+            result_html += 2 * "<br>" + mini_df_html + 3 * "<br>"
 
             # detay icmalleri
             # adding detay
@@ -766,7 +769,7 @@ class IcmalReportGenerator(object):
             last_added_text += "<hr>"
 
             result_html += last_added_text
-            result_html += df_detail_html.render()
+            result_html += df_detail_html.hide_index().render()
 
             arcpy.AddMessage("result was created")
 
@@ -774,7 +777,7 @@ class IcmalReportGenerator(object):
             # Parsel Emlak Vergisi Icmali
 
             arcpy.AddMessage("Parsel Emlak Vergisi Icmali secildi")
-            icmal_html = base_html_head.replace("{report_title}", "Parsel Emlak Vergisi Icmali")
+            icmal_html = base_html_head.replace("{report_title}", "İsdemir Parsel Emlak Vergisi Icmali")
             name = "parsel_emlak_vergisi_icmal_report.html"
 
             # table_name = "ISD_NEW.dbo.Parsel_Eml_Od_Icmal_Sorgusu"
@@ -897,7 +900,7 @@ class IcmalReportGenerator(object):
             arcpy.AddMessage("Yapi Dava Takip Raporu secildi")
             icmal_html = base_html_head.replace("{report_title}", "Yapi Dava Takip İcmali ")
             name = "yapi_dava_takip_report.html"
-            added_first_text = f"<h2 style='color:black;'>İSDEMIR YAPI DAVA TAKİP İCMALİ</h2>" \
+            added_first_text = f"<h2 style='color:black;'>İsdemir Yapı Dava Takip İcmali</h2>" \
                                f"<hr>"
             icmal_html += added_first_text
 
@@ -985,7 +988,7 @@ class IcmalReportGenerator(object):
         elif icmal_type == report_choice_list[5]:
             # Parsel Dava Takip Raporu
             arcpy.AddMessage("Parsel Dava Takip Raporu secildi.")
-            icmal_html = base_html_head.replace("{report_title}", "Parsel Dava Takip Raporu ")
+            icmal_html = base_html_head.replace("{report_title}", "İsdemir Parsel Dava Takip Raporu ")
             name = "parsel_dava_takip_report.html"
 
             clean_fields = ["p_oid", "parselid", "AlanBuyuklugu", "ParselNitelik", "ImarDurumu",
@@ -1072,7 +1075,7 @@ class IcmalReportGenerator(object):
             icmal_html = base_html_head.replace("{report_title}", "Kiralama Icmali")
             name = "kiralama_report.html"
 
-            added_first_text = f"<h2 style='color:black;'>ISDEMIR Kiralamalar İcmali</h2>" \
+            added_first_text = f"<h2 style='color:black;'>İsdemir Kiralamalar İcmali</h2>" \
                                f"<hr>"
             icmal_html += added_first_text
 
