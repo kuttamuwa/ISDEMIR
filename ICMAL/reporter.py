@@ -263,6 +263,8 @@ class IcmalReportGenerator(object):
             # Sıra noyu tepeye almayı burada başardık
             # todo : Yapı icmalinde bulunan OEB durumları ilişkiden değil yapı katmanındaki
             #  herhangi bir sütundan elde edilmelidir. Ya da İsdemir A.Ş. bu durumu güncellemelidir.
+            # todo: Yapı icmalindeki YKIB alındı sütununda imar barışı, encümen kararı ve YKIB kırılımları eklenmelidir.
+            # todo: Yapı icmalinde bulunan OEB durumları ilişkiden değil yapı katmanındaki herhangi bir sütundan elde edilmelidir. Ya da İsdemir A.Ş. bu durumu güncellemelidir.
 
             arcpy.AddMessage("Yapi Icmali secildi")
             icmal_html = base_html_head.replace("{report_title}", "Yerlesim Alani Genel Arazi Icmali (Yapi) ")
