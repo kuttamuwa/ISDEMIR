@@ -4,7 +4,7 @@ from pyproj import Transformer
 import os
 
 # environment settings
-env_path = r"C:\Users\sozeren.mapit\Desktop\UMUT\onyapitest\tumdata_1.gdb"
+env_path = r"C:\Users\Admin\Documents\ArcGIS\Projects\ISDEMIR\isdemirsde.sde"
 arcpy.env.workspace = env_path
 
 # transformation settings
@@ -25,13 +25,13 @@ transformer = Transformer.from_crs(src_crs, target_crs)
 
 # editing session
 edit = arcpy.da.Editor(env_path)
-edit.startEditing(True, False)
-# edit.startOperation()
+edit.startEditing(False, True)
+edit.startOperation()
 
 # sample_x, sample_y = 12519133.878038634, 4066382.0430306355
 for fc in arcpy.ListFeatureClasses("*"):
     fc = os.path.join(env_path, fc)
-
+    fc = arcpy.MakeFeatureLayer_management(fc)
     try:
         arcpy.AddMessage("{0} fc icin basliyoruz ..".format(fc))
         with arcpy.da.UpdateCursor(fc, ['OID@', 'SHAPE@XY']) as ucursor:
@@ -48,5 +48,5 @@ for fc in arcpy.ListFeatureClasses("*"):
     except Exception as err:
         arcpy.AddMessage("{0} feature classinda hata aldik : {1}".format(fc, str(err)))
 
-# edit.stopOperation()
+edit.stopOperation()
 edit.stopEditing(True)

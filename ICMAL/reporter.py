@@ -260,7 +260,8 @@ class IcmalReportGenerator(object):
 
         if icmal_type == report_choice_list[0]:
             # Yapi Icmali: Yapi_Geo_Icmal_Sorgusu (Detay) - Summary
-            # todo : Yapı icmalinde bulunan OEB durumları ilişkiden değil yapı katmanındaki herhangi bir sütundan elde edilmelidir. Ya da İsdemir A.Ş. bu durumu güncellemelidir.
+            # todo : Yapı icmalinde bulunan OEB durumları ilişkiden değil yapı katmanındaki
+            #  herhangi bir sütundan elde edilmelidir. Ya da İsdemir A.Ş. bu durumu güncellemelidir.
 
             arcpy.AddMessage("Yapi Icmali secildi")
             icmal_html = base_html_head.replace("{report_title}", "Yerlesim Alani Genel Arazi Icmali (Yapi) ")
@@ -369,7 +370,7 @@ class IcmalReportGenerator(object):
 
             df_detail = self.ada_parsel_merger(df_detail)
             df_detail.sort_values(['Yapı No'], inplace=True)
-            df_detail.drop(['Ada No', 'Parsel No'], inplace=True)
+            df_detail.drop(columns=['Ada No', 'Parsel No'], inplace=True)
 
             # export html
             df_detail_style = df_detail.style
@@ -377,8 +378,8 @@ class IcmalReportGenerator(object):
             df_detail_style = df_detail_style.set_table_attributes(
                 'border="1" class=dataframe table table-hover table-bordered')
 
-            df_detail_html = df_detail_style.hide_index().render().\
-                replace('NaT','').replace('None', '').replace('nan', '').replace('YKIB', 'YKİB')
+            df_detail_html = df_detail_style.hide_index().render(). \
+                replace('NaT', '').replace('None', '').replace('nan', '').replace('YKIB', 'YKİB')
             arcpy.AddMessage("Detail dataframe was created")
 
             result_html = icmal_html + "<br>" + df_sum_pivot_html_style_rendered + 2 * "<br>" + added_text + df_detail_html
@@ -386,7 +387,6 @@ class IcmalReportGenerator(object):
 
         elif icmal_type == report_choice_list[1]:
             # Yapi Emlak Vergisi Icmali
-            # todo: Yapı Adı sütunu sola dayalı
             # todo: Sırası -> Verilen, verilecek, inşaatı devam ediyor, muaf, İlişkisiz (BITTI)
 
             arcpy.AddMessage("Yapi Emlak Icmali secildi.")
@@ -409,7 +409,7 @@ class IcmalReportGenerator(object):
             df_summary.rename(columns={'Emlakvergisi_durumu': 'Emlak Vergisi Durumu', 'TOPLAM': 'Adet Sayısı',
                                        'TOPLAM_INSAAT_ALAN': 'Toplam (m²)'}, inplace=True)
 
-            df_detail.rename(columns={'yapi_no': 'Yapı No', 'YapiAdi': 'Yapı Adı', 'AdaNo': 'Ada No',
+            df_detail.rename(columns={'YapiAdi': 'Yapı Adı', 'yapi_no': 'Yapı No', 'AdaNo': 'Ada No',
                                       'ParselNo': 'Parsel No', 'katsayisi': 'Kat Sayısı', 'yapimtarihi': 'Yapım Tarihi',
                                       'asansor': 'Asansör', 'kalorifer': 'Kalorifer', 'KullanimSekli': 'Kullanım Şekli',
                                       'yapimulkiyeti': 'Yapı Mülkiyeti', 'InsaatTuru': 'İnşaat Türü',
@@ -445,18 +445,33 @@ class IcmalReportGenerator(object):
 
             df_detail = df_detail.replace('nan', '', regex=True)
 
+            # sorting columns
+            new_sorted_columns = list(df_detail.columns)
+            new_sorted_columns.remove('Yapı Adı')
+            new_sorted_columns.insert(0, 'Yapı Adı')
+
+            df_detail = df_detail.reindex(new_sorted_columns, axis=1)
+
             # export html
             df_detail_style = df_detail.style
             df_detail_style = df_detail_style.set_properties(**{'width': '600px', 'text-align': 'center'})
             df_detail_style = df_detail_style.set_table_attributes(
                 'border="1" class=dataframe table table-hover table-bordered')
             df_detail_style = df_detail_style.set_table_styles(
-                [{
-                    'selector': 'th',
-                    'props': [
-                        ('background-color', '#2880b8'),
-                        ('color', 'white')]
-                }]
+                [
+                    {
+                        'selector': 'th',
+                        'props': [
+                            ('background-color', '#2880b8'),
+                            ('color', 'white')]
+                    },
+                    {
+                        'selector': 'th:nth-child(0)',
+                        'props': [
+                            ('text-align', 'left')
+                        ]
+                    }
+                ]
             )
             df_detail_style_html = df_detail_style.render().replace('None', '')
 
@@ -464,8 +479,8 @@ class IcmalReportGenerator(object):
             df_summary['Toplam (m²)'] = df_summary['Toplam (m²)'].astype(float).map('{:,.2f}'.format)
 
             # Emlak Vergisi Index sorting
-            # df_summary['Emlak Vergisi Durumu'] = df_summary['Emlak Vergisi Durumu'].map(
-            #     'Verilen', 'Verilecek', 'İnşaatı Devam Ediyor', 'Muaf', 'İlişkisiz', 'Genel Toplam')
+            custom_evd_dict = {'Verilen': 0, 'Verilecek': 1, 'İnşaatı Devam Ediyor': 2, 'Muaf': 3, 'İlişkisiz': 4,
+                               'Genel Toplam': 5}
 
             # styling
             df_sum_html = df_summary.style
@@ -771,7 +786,7 @@ class IcmalReportGenerator(object):
                                       'parselemlakaciklama': 'Parsel Emlak Açıklama',
                                       'ParselNitelik': 'Parsel Nitelik', 'Kullanimsekli': 'Kullanım Şekli',
                                       'Arsa_birim_bedeli_nereden_alind': 'Arsa Birim Bedeli Nereden Alındı',
-                                      'YapiDurumu': 'YAPI DURUMU', 'HisseAlani': 'Hisse Alanı (m2)'},
+                                      'YapiDurumu': 'Yapı Durumu', 'HisseAlani': 'Hisse Alanı (m2)'},
                              inplace=True)
 
             # datetime formatting
@@ -818,7 +833,7 @@ class IcmalReportGenerator(object):
             df_detail = df_detail.replace('nan', '', regex=True)
             df_detail = df_detail.replace('None', '', regex=True)
             df_detail['Hisse Alanı (m2)'] = df_detail['Hisse Alanı (m2)'].astype(float).map('{:,.2f}'.format)
-            df_detail.drop(columns=['Ada No', 'Parsel No'])
+            df_detail.drop(columns=['Ada No', 'Parsel No'], inplace=True)
 
             df_detail.index.names = ['Sıra No']
 
