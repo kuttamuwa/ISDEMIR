@@ -264,7 +264,6 @@ class IcmalReportGenerator(object):
             # todo : Yapı icmalinde bulunan OEB durumları ilişkiden değil yapı katmanındaki
             #  herhangi bir sütundan elde edilmelidir. Ya da İsdemir A.Ş. bu durumu güncellemelidir.
             # todo: Yapı icmalindeki YKIB alındı sütununda imar barışı, encümen kararı ve YKIB kırılımları eklenmelidir.
-            # todo: Yapı icmalinde bulunan OEB durumları ilişkiden değil yapı katmanındaki herhangi bir sütundan elde edilmelidir. Ya da İsdemir A.Ş. bu durumu güncellemelidir.
 
             arcpy.AddMessage("Yapi Icmali secildi")
             icmal_html = base_html_head.replace("{report_title}", "Yerlesim Alani Genel Arazi Icmali (Yapi) ")
@@ -305,10 +304,11 @@ class IcmalReportGenerator(object):
             df_summary = df_detail.copy()
 
             # imar barışı tricking
-            df_summary.loc[df_summary['YKIB Edinim Yöntemi'] == 'İmar Barışı', 'YKIB Durum'] = 'İmar Barışı'
+            # df_summary.loc[df_summary['YKIB Edinim Yöntemi'] == 'İmar Barışı', 'YKIB Durum'] = 'İmar Barışı'
             df_sum_pivot = pd.crosstab(df_summary['Malik'], columns=[df_summary['OEB Durumu'],
                                                                      df_summary['Ruhsat Durum'],
-                                                                     df_summary['YKIB Durum']], dropna=False)
+                                                                     df_summary['YKIB Durum'],
+                                                                     df_summary['YKIB Edinim Yöntemi']], dropna=False)
 
             df_sum_pivot.rename(columns={'rowid': 'INDEX', 'disinda': 'Dışında', 'icinde': 'İçinde',
                                          'YKIB_ALINDI': 'YKIB ALINDI', 'YKIB_KAYITYOK': 'YKIB KAYDI YOK',
@@ -391,8 +391,6 @@ class IcmalReportGenerator(object):
 
         elif icmal_type == report_choice_list[1]:
             # Yapi Emlak Vergisi Icmali
-            # todo: Sırası -> Verilen, verilecek, inşaatı devam ediyor, muaf, İlişkisiz (BITTI)
-
             arcpy.AddMessage("Yapi Emlak Icmali secildi.")
             icmal_html = base_html_head.replace("{report_title}", "Yapı Emlak Vergisi Icmali")
             name = "bina_emlak_icmali.html"
@@ -456,9 +454,14 @@ class IcmalReportGenerator(object):
 
             df_detail = df_detail.reindex(new_sorted_columns, axis=1)
 
+            # resetting index
+            df_detail['Sıra No'] = df_detail.index
+
             # export html
             df_detail_style = df_detail.style
             df_detail_style = df_detail_style.set_properties(**{'width': '600px', 'text-align': 'center'})
+            df_detail_style = df_detail_style.set_properties(subset=['Yapı Adı'], **{'text-align': 'left'})
+
             df_detail_style = df_detail_style.set_table_attributes(
                 'border="1" class=dataframe table table-hover table-bordered')
             df_detail_style = df_detail_style.set_table_styles(
@@ -483,8 +486,10 @@ class IcmalReportGenerator(object):
             df_summary['Toplam (m²)'] = df_summary['Toplam (m²)'].astype(float).map('{:,.2f}'.format)
 
             # Emlak Vergisi Index sorting
-            custom_evd_dict = {'Verilen': 0, 'Verilecek': 1, 'İnşaatı Devam Ediyor': 2, 'Muaf': 3, 'İlişkisiz': 4,
-                               'Genel Toplam': 5}
+            custom_evd_sort = ['Verilen', 'Verilecek', 'İnşaatı Devam Ediyor', 'Muaf', 'İlişkisiz', 'Genel Toplam']
+
+            # make evd as index and sort and make column again
+            df_summary = df_summary.set_index(['Emlak Vergisi Durumu']).reindex(custom_evd_sort).reset_index()
 
             # styling
             df_sum_html = df_summary.style
@@ -496,7 +501,7 @@ class IcmalReportGenerator(object):
                         ('color', 'white')]
                 }]
             )
-            df_sum_html = df_sum_html.set_properties(**{'width': '200px', 'text-align': 'center'})
+            df_sum_html = df_sum_html.set_properties(**{'width': '150px', 'text-align': 'center'})
             df_sum_html = df_sum_html.set_table_attributes(
                 'border="1" class=dataframe table table-hover table-bordered')
 
