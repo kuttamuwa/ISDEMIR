@@ -260,6 +260,7 @@ class IcmalReportGenerator(object):
 
         if icmal_type == report_choice_list[0]:
             # Yapi Icmali: Yapi_Geo_Icmal_Sorgusu (Detay) - Summary
+            # Sıra noyu tepeye almayı burada başardık
             # todo : Yapı icmalinde bulunan OEB durumları ilişkiden değil yapı katmanındaki
             #  herhangi bir sütundan elde edilmelidir. Ya da İsdemir A.Ş. bu durumu güncellemelidir.
 
@@ -305,8 +306,7 @@ class IcmalReportGenerator(object):
             df_summary.loc[df_summary['YKIB Edinim Yöntemi'] == 'İmar Barışı', 'YKIB Durum'] = 'İmar Barışı'
             df_sum_pivot = pd.crosstab(df_summary['Malik'], columns=[df_summary['OEB Durumu'],
                                                                      df_summary['Ruhsat Durum'],
-                                                                     df_summary['YKIB Durum'],
-                                                                     df_summary['YKIB Edinim Yöntemi']], dropna=False)
+                                                                     df_summary['YKIB Durum']], dropna=False)
 
             df_sum_pivot.rename(columns={'rowid': 'INDEX', 'disinda': 'Dışında', 'icinde': 'İçinde',
                                          'YKIB_ALINDI': 'YKIB ALINDI', 'YKIB_KAYITYOK': 'YKIB KAYDI YOK',
@@ -353,6 +353,8 @@ class IcmalReportGenerator(object):
             # index to column
             df_detail.reset_index(inplace=True)
             df_detail.rename(columns={'rowid': 'Sıra No'}, inplace=True)
+
+            # son yazilar
             added_text = f"<h2 style='color: blue;'>İSDEMİR YAPI LİSTESİ</h2>" \
                          f"Toplam Kayıt Sayısı : {df_detail.count()['Ada No']}"
             arcpy.AddMessage("Columns renaming completed")
@@ -437,18 +439,18 @@ class IcmalReportGenerator(object):
 
             # delete index row
             df_detail.reset_index(inplace=True)
-            df_detail.index.names = ['Sıra No']
+            df_detail.rename(columns={'rowid': 'Sıra No'}, inplace=True)
 
             # delete Malik
             df_detail_toplam_kayit = df_detail.count()['Ada No']
-            df_detail.drop(columns=['Malik', 'Ada No', 'Parsel No', 'rowid'], inplace=True)
+            df_detail.drop(columns=['Malik', 'Ada No', 'Parsel No'], inplace=True)
 
             df_detail = df_detail.replace('nan', '', regex=True)
 
             # sorting columns
             new_sorted_columns = list(df_detail.columns)
             new_sorted_columns.remove('Yapı Adı')
-            new_sorted_columns.insert(0, 'Yapı Adı')
+            new_sorted_columns.insert(1, 'Yapı Adı')
 
             df_detail = df_detail.reindex(new_sorted_columns, axis=1)
 
@@ -473,7 +475,7 @@ class IcmalReportGenerator(object):
                     }
                 ]
             )
-            df_detail_style_html = df_detail_style.render().replace('None', '')
+            df_detail_style_html = df_detail_style.hide_index().render().replace('None', '')
 
             df_summary['Adet Sayısı'] = df_summary['Adet Sayısı'].astype(float).map('{:,.0f}'.format)
             df_summary['Toplam (m²)'] = df_summary['Toplam (m²)'].astype(float).map('{:,.2f}'.format)
@@ -518,7 +520,9 @@ class IcmalReportGenerator(object):
             # TESTED : BITTI Kayıt yok değerleri boş olmalıdır.
             # todo : YARI BITTI Parsel Sayısı ve Alan Toplamı alanları daraltılmalıdır. Alan toplamında m2 yazılmalıdır.
             # todo : Parsel icmalinde alan büyüklükleri İsdemir hisse alanından hesaplanacaktır.
+            #  MALIKI ISDEMIR PARSELLERI OLANLAR BÖYLE; DIGERLERI ISE ALAN BUYUKLUGU
             #  İsdemir A.Ş. bu alanı her zaman güncelleyecektir.
+            # TODO: ARA TABLONUN EN ALTINA TOPLAM ALAN SAYISI VE TOPLAM M2 EKLENECEK
 
             arcpy.AddMessage("Parsel Icmali secildi")
             icmal_html = base_html_head.replace("{report_title}", "Parsel Icmali ")
@@ -529,7 +533,7 @@ class IcmalReportGenerator(object):
             icmal_html += added_first_text
 
             clean_fields = ["OBJECTID", "Aciklama", "PaftaNo", "ParselUavt_Kodu", "Mahalle_Koy",
-                            "HisseOrani", "oeb_durumu", "rowid", "SHAPE.STArea()", "SHAPE.STLength()"]
+                            "HisseOrani", "oeb_durumu", "SHAPE.STArea()", "SHAPE.STLength()"]
 
             df_detail = self.table_to_data_frame("ISD_NEW.dbo.Parsel_Geo_Icmal_Sorgu")
             df_summary = self.table_to_data_frame("ISD_NEW.dbo.PARSEL_ICMALI_VW",
@@ -685,7 +689,9 @@ class IcmalReportGenerator(object):
             df_detail = df_detail.replace('None', '', regex=True)
             df_detail = df_detail.fillna('')
 
-            df_detail.index.names = ['Sıra No']
+            # delete index row
+            df_detail.reset_index(inplace=True)
+            df_detail.rename(columns={'rowid': 'Sıra No'}, inplace=True)
 
             # export html
             df_detail_html = df_detail.style
@@ -765,7 +771,7 @@ class IcmalReportGenerator(object):
             name = "parsel_emlak_vergisi_icmal_report.html"
 
             # table_name = "ISD_NEW.dbo.Parsel_Eml_Od_Icmal_Sorgusu"
-            table_name = "ISD_NEW.DBO.ParselEmlakOdemelerIcmal_VW2"
+            table_name = "ISD_NEW.DBO.ParselEmlakIcmal_VW"
 
             clean_fields = ["OBJECTID", "Eski_Parsel_ID", "Aciklama", "AlanBuyuklugu", "KullanimSekli", "ImarDurumu",
                             "ParselMulkiyet", "PaftaNo", "ParselUavt_Kodu", "HisseOrani", "VRHTip",
@@ -786,7 +792,8 @@ class IcmalReportGenerator(object):
                                       'parselemlakaciklama': 'Parsel Emlak Açıklama',
                                       'ParselNitelik': 'Parsel Nitelik', 'Kullanimsekli': 'Kullanım Şekli',
                                       'Arsa_birim_bedeli_nereden_alind': 'Arsa Birim Bedeli Nereden Alındı',
-                                      'YapiDurumu': 'Yapı Durumu', 'HisseAlani': 'Hisse Alanı (m2)'},
+                                      'YapiDurumu': 'Yapı Durumu', 'HisseAlani': 'Hisse Alanı (m2)',
+                                      'Arsa_Degeri': 'Arsa Değeri'},
                              inplace=True)
 
             # datetime formatting
@@ -900,7 +907,7 @@ class IcmalReportGenerator(object):
                                       'DavaKonusu': 'Dava Konusu', 'DavaAcilisTarihi': 'Dava Açılış Tarihi',
                                       'KararTarihi': 'Karar Tarihi', 'KararNo': 'Karar No',
                                       'EsasNo': 'Esas No', 'DavaSonucu': 'Dava Sonucu', 'DavaDurumu': 'Dava Durumu',
-                                      'DavaDegeri': 'Dava Değeri', 'ILCE_ADI': 'İlçe Adı', 'Aciklama': 'Açıklama',
+                                      'DavaDegeri': 'Dava Değeri (TL)', 'ILCE_ADI': 'İlçe Adı', 'Aciklama': 'Açıklama',
                                       'Davaci': 'Davacı', 'Davali': 'Davalı', 'DavaDegeriBirimi': 'Dava Değeri Birimi',
                                       'adliye': 'Adliye', 'merci': 'Merci'},
                              inplace=True)
@@ -917,7 +924,7 @@ class IcmalReportGenerator(object):
             arcpy.AddMessage("Detail was formatted as index")
 
             # number formatting
-            df_detail['Dava Değeri'] = df_detail['Dava Değeri'].astype(float, errors='ignore').map('{:,.2f}'.format)
+            df_detail['Dava Değeri (TL)'] = df_detail['Dava Değeri (TL)'].astype(float, errors='ignore').map('{:,.2f}'.format)
             arcpy.AddMessage("Dava degeri and Ada No was formatted")
 
             # Ada Parsel
@@ -970,8 +977,6 @@ class IcmalReportGenerator(object):
 
         elif icmal_type == report_choice_list[5]:
             # Parsel Dava Takip Raporu
-            # todo : Parsel Dava Takip İcmalinde de Karar tarihi "Gün - Ay - Yıl" olacak. Bunu o jira kaydına ekle
-            # todo        ""       ""        ""            Dava değeri : thousand seperator
             arcpy.AddMessage("Parsel Dava Takip Raporu secildi.")
             icmal_html = base_html_head.replace("{report_title}", "Parsel Dava Takip Raporu ")
             name = "parsel_dava_takip_report.html"
@@ -1009,7 +1014,7 @@ class IcmalReportGenerator(object):
             df_detail['Ada No'] = df_detail['Ada No'].astype(float).map('{:.0f}'.format)
             # NOT : Parsel no coalesce
 
-            df_detail = self.ada_parsel_merger(df_detail)
+            df_detail = self.ada_parsel_merger(df_detail, sep='/')
             df_detail.reset_index()
             df_detail.index.names = ['Sıra No']
             df_detail.drop(columns=['Ada No', 'Parsel No', 'rowid'], inplace=True)
@@ -1053,6 +1058,8 @@ class IcmalReportGenerator(object):
             # Son Yıla Ait Ödeme, ve Son Ödeme Yılı (sadece dt.year) diye iki tane sütun açılacak ve
             # buradaki değerler ödeme tablosundaki ilişkili sözleşmelerin kiralama, irtifak ecrimisil vs.
             # değerlerini getirecek. Yılı da yine ödemeden getirilecek.
+            # todo: Konusu sütunu biraz genişletilecek.
+            # todo: Sıra no resetting
 
             arcpy.AddMessage("Kiralama Icmali secildi.")
             icmal_html = base_html_head.replace("{report_title}", "Kiralama Icmali")
@@ -1105,14 +1112,14 @@ class IcmalReportGenerator(object):
             df_detail_kayit_sayisi = df_detail.count()['Ada No']
 
             # Ada Parsel
-            df_detail = self.ada_parsel_merger(df_detail, sep='/')
+            df_detail = self.ada_parsel_merger(df_detail)
             df_detail.drop(columns=['Ada No', 'Parsel No'], inplace=True)
 
             # sorting
             df_detail.sort_values(['Kira İzin Durumu', 'KHT No'], inplace=True)
 
             # concat
-            df_detail['Birim Bedeli'] = df_detail['Birim Bedeli'] + df_detail['Para Birimi']
+            df_detail['Birim Bedeli'] = df_detail['Birim Bedeli'] + ' ' + df_detail['Para Birimi']
 
             # drop columns
             df_detail.drop(columns=['Para Birimi'], inplace=True)
