@@ -247,7 +247,7 @@ class IcmalReportGenerator(object):
         return r_c
 
     @staticmethod
-    def ada_parsel_merger(df, adafield='Ada No', parselfield='Parsel No', mergerfield='Ada Parsel', sep='-'):
+    def ada_parsel_merger(df, adafield='Ada No', parselfield='Parsel No', mergerfield='Ada Parsel', sep='/'):
         df[mergerfield] = df[[adafield, parselfield]].apply(lambda row: sep.join(row.values.astype(str)), axis=1)
         return df
 
@@ -263,6 +263,7 @@ class IcmalReportGenerator(object):
             # Sıra noyu tepeye almayı burada başardık
             # todo : Yapı icmalinde bulunan OEB durumları ilişkiden değil yapı katmanındaki
             #  herhangi bir sütundan elde edilmelidir. Ya da İsdemir A.Ş. bu durumu güncellemelidir.
+            # TODO: Ruhsat Alınma Tarihi : Gün - Ay - Yıl
 
             arcpy.AddMessage("Yapi Icmali secildi")
             icmal_html = base_html_head.replace("{report_title}", "Yerlesim Alani Genel Arazi Icmali (Yapi) ")
@@ -278,9 +279,9 @@ class IcmalReportGenerator(object):
 
             # datetime formatting
             df_detail['Ykib_Tarihi'] = pd.to_datetime(df_detail['Ykib_Tarihi'],
-                                                      errors='coerce').dt.strftime('%Y-%m-%d')
+                                                      errors='coerce').dt.strftime('%d-%m-%Y')
             df_detail['RuhsatAlinmaTarihi'] = pd.to_datetime(df_detail['RuhsatAlinmaTarihi'],
-                                                             errors='coerce').dt.strftime('%Y-%m-%d')
+                                                             errors='coerce').dt.strftime('%d-%m-%Y')
 
             # formatting nulls
             df_detail.loc[df_detail['GuncelDurum'].isnull(), 'GuncelDurum'] = 'YKIB_KAYITYOK'
@@ -517,6 +518,7 @@ class IcmalReportGenerator(object):
 
         elif icmal_type == report_choice_list[2]:
             # Parsel Icmali
+            # todo: Parsel Sayısı sütunun genişliğini daralt.
             # TODO: ARA TABLONUN EN ALTINA TOPLAM ALAN SAYISI VE TOPLAM M2 EKLENECEK
 
             arcpy.AddMessage("Parsel Icmali secildi")
@@ -613,12 +615,20 @@ class IcmalReportGenerator(object):
                            else '' for i in x], axis=1)
 
             all_in_one_rendered = all_in_one_rendered.set_table_styles(
-                [{
-                    'selector': 'th',
-                    'props': [
-                        ('background-color', '#2880b8'),
-                        ('color', 'white')]
-                }]
+                [
+                    {
+                        'selector': 'th',
+                        'props': [
+                            ('background-color', '#2880b8'),
+                            ('color', 'white')]
+                    },
+                    {
+                        'selector': 'th:nth-child(2)',
+                        'props': [
+                            ('min-width', '25%')
+                        ]
+                    }
+                ]
             )
             all_in_one_rendered = all_in_one_rendered.set_properties(**{'width': '300px', 'height': '20px',
                                                                         'text-align': 'left'})
@@ -926,7 +936,8 @@ class IcmalReportGenerator(object):
             arcpy.AddMessage("Detail was formatted as index")
 
             # number formatting
-            df_detail['Dava Değeri (TL)'] = df_detail['Dava Değeri (TL)'].astype(float, errors='ignore').map('{:,.2f}'.format)
+            df_detail['Dava Değeri (TL)'] = df_detail['Dava Değeri (TL)'].astype(float, errors='ignore').map(
+                '{:,.2f}'.format)
             arcpy.AddMessage("Dava degeri and Ada No was formatted")
 
             # Ada Parsel
@@ -1150,7 +1161,7 @@ class IcmalReportGenerator(object):
                         ('color', 'white')]
                 },
                     {
-                        'selector': 'th:nth-child(1)',
+                        'selector': 'th:nth-child(3)',
                         'props': [
                             ('min-width', '45%')
                         ]
