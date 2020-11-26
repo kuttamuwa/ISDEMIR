@@ -261,9 +261,6 @@ class IcmalReportGenerator(object):
         if icmal_type == report_choice_list[0]:
             # Yapi Icmali: Yapi_Geo_Icmal_Sorgusu (Detay) - Summary
             # Sıra noyu tepeye almayı burada başardık
-            # todo : Yapı icmalinde bulunan OEB durumları ilişkiden değil yapı katmanındaki
-            #  herhangi bir sütundan elde edilmelidir. Ya da İsdemir A.Ş. bu durumu güncellemelidir.
-            # TODO: Ruhsat Alınma Tarihi : Gün - Ay - Yıl
 
             arcpy.AddMessage("Yapi Icmali secildi")
             icmal_html = base_html_head.replace("{report_title}", "Yerlesim Alani Genel Arazi Icmali (Yapi) ")
@@ -622,10 +619,17 @@ class IcmalReportGenerator(object):
                             ('background-color', '#2880b8'),
                             ('color', 'white')]
                     },
+
                     {
                         'selector': 'th:nth-child(2)',
                         'props': [
-                            ('min-width', '25%')
+                            ('width', '3%')
+                        ]
+                    },
+                    {
+                        'selector': 'th:nth-child(3)',
+                        'props': [
+                            ('width', '15%')
                         ]
                     }
                 ]
@@ -1075,9 +1079,9 @@ class IcmalReportGenerator(object):
 
         elif icmal_type == report_choice_list[6]:
             # Kiralama Icmali
-            # Son Yıla Ait Ödeme, ve Son Ödeme Yılı (sadece dt.year) diye iki tane sütun açılacak ve
-            # buradaki değerler ödeme tablosundaki ilişkili sözleşmelerin kiralama, irtifak ecrimisil vs.
-            # değerlerini getirecek. Yılı da yine ödemeden getirilecek.
+            # todo: Son Yıla Ait Ödeme, ve Son Ödeme Yılı (sadece dt.year) diye iki tane sütun açılacak ve
+            #  buradaki değerler ödeme tablosundaki ilişkili sözleşmelerin kiralama, irtifak ecrimisil vs.
+            #  değerlerini getirecek. Yılı da yine ödemeden getirilecek.
             # todo: Konusu sütunu biraz genişletilecek.
 
             arcpy.AddMessage("Kiralama Icmali secildi.")
@@ -1094,8 +1098,12 @@ class IcmalReportGenerator(object):
                             "KIRA_BASLANGIC_TARIHI", "KIRA_BITIS_TARIHI", "KHTNO", "ALAN_BUYUKLUGU"]
 
             table_name = "ISD_NEW.dbo.KHT_SORGU_VW"
+            # odeme_table_name = 'ISD_NEW.dbo.ODEME'
 
             df_detail = self.table_to_data_frame(table_name)
+            # df_odeme = self.table_to_data_frame(odeme_table_name)
+            # df_detail = df_detail.join(df_odeme, how='left', on=[''])
+
             df_detail = df_detail[[i for i in df_detail.columns if i in clean_fields]]
 
             # formatting

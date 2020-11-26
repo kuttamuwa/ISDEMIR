@@ -46,7 +46,6 @@ else:
     cad_type = '.dwg'
     output_type = 'DWG_R2013'
 
-
 if feature_name.count("."):
     feature_pure_name = feature_name.split(".")[-1]
     feature_name = feature_name.split(".")[-1] + cad_type

@@ -118,7 +118,8 @@ def XYsetVALUE(shape, globalidfield):
     cpp = {}
     with arcpy.da.SearchCursor('YAPI_PROJECTED', ["GlobalID", "SHAPE@"]) as sCursor:
         for row in sCursor:
-            cpp[row[0]] = row[1]
+            if row[0] in cpp:
+                cpp[row[0]] = row[1]
 
     return cpp[globalidfield]
 
