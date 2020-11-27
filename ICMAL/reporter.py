@@ -251,6 +251,15 @@ class IcmalReportGenerator(object):
         df[mergerfield] = df[[adafield, parselfield]].apply(lambda row: sep.join(row.values.astype(str)), axis=1)
         return df
 
+    @staticmethod
+    def make_column_nth_order(df, column_name, order):
+        df_columns = list(df.columns)
+        df_columns.remove(column_name)
+        df_columns.insert(order, column_name)
+        df = df[[i for i in df_columns]]
+
+        return df
+
     def execute(self, parameters, messages):
         workspace = r"C:\YAYIN\cbsarcgisew.sde"
         env.workspace = workspace
@@ -373,6 +382,9 @@ class IcmalReportGenerator(object):
             df_detail.sort_values(['Yapı No'], inplace=True)
             df_detail.drop(columns=['Ada No', 'Parsel No'], inplace=True)
 
+            # Ada Parsel to leftest
+            df_detail = self.make_column_nth_order(df_detail, 'Ada Parsel', order=4)
+
             # export html
             df_detail_style = df_detail.style
             df_detail_style.set_properties(**{'width': '600px', 'text-align': 'center'})
@@ -454,6 +466,9 @@ class IcmalReportGenerator(object):
             # resetting index
             df_detail['Sıra No'] = df_detail.index
 
+            # Ada Parsel to leftest
+            df_detail = self.make_column_nth_order(df_detail, 'Ada Parsel', 3)
+
             # export html
             df_detail_style = df_detail.style
             df_detail_style = df_detail_style.set_properties(**{'width': '600px', 'text-align': 'center'})
@@ -528,17 +543,13 @@ class IcmalReportGenerator(object):
             clean_fields = ["OBJECTID", "Aciklama", "PaftaNo", "ParselUavt_Kodu", "Mahalle_Koy",
                             "HisseOrani", "oeb_durumu", "SHAPE.STArea()", "SHAPE.STLength()"]
 
-            df_detail = self.table_to_data_frame("ISD_NEW.dbo.Parsel_Geo_Icmal_Sorgu")
+            df_detail = self.table_to_data_frame("ISD_NEW.dbo.Parsel_Geo_Icmal_Sorgu_new")
             df_summary = self.table_to_data_frame("ISD_NEW.dbo.PARSEL_ICMALI_VW",
                                                   input_fields=['AlanBuyuklugu', 'Eski_Parsel_ID',
                                                                 'rapor_malik', 'rapor_kullanimi', 'HisseAlani'])
             arcpy.AddMessage("Summary and Detail Dataframe were created")
 
             df_summary.rename(columns={'Eski_Parsel_ID': 'parselid'}, inplace=True)
-
-            # rapor malik ve rapor kullanim sutunlarinin Parselden detaya aktarilmasi
-            df_detail = df_detail.join(df_summary, lsuffix='_caller', rsuffix='_other', on='parselid')
-            arcpy.AddMessage("Detay icmaline rapor_malik ve rapor_kullanim sütunları aktarıldı ")
 
             df_detail = df_detail[[i for i in df_detail.columns if i not in clean_fields]]
 
@@ -636,7 +647,7 @@ class IcmalReportGenerator(object):
 
             # formatting
             df_detail = df_detail.loc[:, ~df_detail.columns.duplicated()]
-            df_detail['Hisse Alanı (m2)'] = df_detail['HisseAlani_other']
+            # df_detail['Hisse Alanı (m2)'] = df_detail['HisseAlani_other']
             df_detail.drop(columns=[i for i in df_detail.columns if i.count('other') or i.count('caller')],
                            inplace=True)
 
@@ -645,18 +656,18 @@ class IcmalReportGenerator(object):
                                       'Kullanimsekli': 'Kullanım Şekli', 'ImarDurumu': 'İmar Durumu',
                                       'ParselMulkiyet': 'Parsel Mülkiyet',
                                       'rapor_malik': 'Rapor Malik', 'rapor_kullanimi': 'Rapor Kullanımı',
-                                      'ILCE_ADI': 'İlçe Adı', 'ParselNitelik': 'Parsel Nitelik'}, inplace=True)
+                                      'ILCE_ADI': 'İlçe Adı', 'ParselNitelik': 'Parsel Nitelik',
+                                      'HisseAlani': 'Hisse Alanı (m2)'}, inplace=True)
             df_detail['Ada No'] = df_detail['Ada No'].astype(float).map('{:,.0f}'.format)
             df_detail = self.ada_parsel_merger(df_detail)
 
-            # order columns
-            df_detail_columns = list(df_detail.columns)
-            df_detail_columns.remove('Ada Parsel')
-            df_detail_columns.insert(0, 'Ada Parsel')
-            df_detail = df_detail[[i for i in df_detail_columns]]
+            # Ada Parsel to leftest
+            df_detail = self.make_column_nth_order(df_detail, 'Ada Parsel', order=3)
 
             # number formatting for df detail
             df_detail['Hisse Alanı (m2)'] = df_detail['Hisse Alanı (m2)'].astype(float).map('{:,.2f}'.format)
+            df_detail['Parsel ID'] = df_detail['Parsel ID'].astype(float).map('{:.0f}'.format)
+            df_detail['Alan Büyüklüğü'] = df_detail['Alan Büyüklüğü'].astype(float).map('{:,.2f}'.format)
 
             # drop columns
             df_detail_toplam_kayit = df_detail.count()['Ada No']
@@ -819,6 +830,9 @@ class IcmalReportGenerator(object):
             df_detail['Hisse Alanı (m2)'] = df_detail['Hisse Alanı (m2)'].astype(float).map('{:,.2f}'.format)
             df_detail.drop(columns=['Ada No', 'Parsel No'], inplace=True)
 
+            # Ada Parsel to leftest
+            df_detail = self.make_column_nth_order(df_detail, 'Ada Parsel', order=1)
+
             # export html
             df_detail_style = df_detail.style
             df_detail_style = df_detail_style.set_properties(**{'width': '600px', 'text-align': 'left'})
@@ -921,6 +935,9 @@ class IcmalReportGenerator(object):
             df_detail = self.ada_parsel_merger(df_detail)
             df_detail.drop(columns=['Ada No', 'Parsel No', 'rowid'], inplace=True)
 
+            # Ada Parsel to leftest
+            df_detail = self.make_column_nth_order(df_detail, 'Ada Parsel', order=16)
+
             # nan
             df_detail = df_detail.replace(np.nan, '', regex=True)
 
@@ -1003,8 +1020,11 @@ class IcmalReportGenerator(object):
             df_detail['Ada No'] = df_detail['Ada No'].astype(float).map('{:.0f}'.format)
             # NOT : Parsel no coalesce
 
-            df_detail = self.ada_parsel_merger(df_detail, sep='/')
+            df_detail = self.ada_parsel_merger(df_detail)
             df_detail.drop(columns=['Ada No', 'Parsel No'], inplace=True)
+
+            # Ada Parsel to leftest
+            df_detail = self.make_column_nth_order(df_detail, 'Ada Parsel', order=1)
 
             df_detail_style = df_detail.style
             df_detail_style = df_detail_style.set_properties(**{'width': '600px', 'text-align': 'left'})
@@ -1109,6 +1129,9 @@ class IcmalReportGenerator(object):
             # Ada Parsel
             df_detail = self.ada_parsel_merger(df_detail)
             df_detail.drop(columns=['Ada No', 'Parsel No'], inplace=True)
+
+            # Ada Parsel to leftest
+            df_detail = self.make_column_nth_order(df_detail, 'Ada Parsel', order=1)
 
             # sorting
             df_detail.sort_values(['Kira İzin Durumu', 'KHT No'], inplace=True)
