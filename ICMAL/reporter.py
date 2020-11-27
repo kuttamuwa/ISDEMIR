@@ -515,7 +515,6 @@ class IcmalReportGenerator(object):
 
         elif icmal_type == report_choice_list[2]:
             # Parsel Icmali
-            # todo: Parsel Sayısı sütunun genişliğini daralt.
             # TODO: ARA TABLONUN EN ALTINA TOPLAM ALAN SAYISI VE TOPLAM M2 EKLENECEK
 
             arcpy.AddMessage("Parsel Icmali secildi")
@@ -538,13 +537,14 @@ class IcmalReportGenerator(object):
             df_summary.rename(columns={'Eski_Parsel_ID': 'parselid'}, inplace=True)
 
             # rapor malik ve rapor kullanim sutunlarinin Parselden detaya aktarilmasi
-            df_detail = df_detail.join(df_summary, lsuffix='_caller', rsuffix='_other')
+            df_detail = df_detail.join(df_summary, lsuffix='_caller', rsuffix='_other', on='parselid')
             arcpy.AddMessage("Detay icmaline rapor_malik ve rapor_kullanim sütunları aktarıldı ")
 
             df_detail = df_detail[[i for i in df_detail.columns if i not in clean_fields]]
 
             df_sums_html = []
             maliks = df_summary['rapor_malik'].unique()
+
             maliks_toplam = 0
 
             df_groups = []
@@ -618,19 +618,6 @@ class IcmalReportGenerator(object):
                         'props': [
                             ('background-color', '#2880b8'),
                             ('color', 'white')]
-                    },
-
-                    {
-                        'selector': 'th:nth-child(2)',
-                        'props': [
-                            ('width', '3%')
-                        ]
-                    },
-                    {
-                        'selector': 'th:nth-child(3)',
-                        'props': [
-                            ('width', '15%')
-                        ]
                     }
                 ]
             )
@@ -645,37 +632,7 @@ class IcmalReportGenerator(object):
 
             all_in_one_rendered_html = all_in_one_rendered_html.replace('None', '')
 
-            # beatifulsoup
-            # soup = bs4.BeautifulSoup(all_in_one_rendered_html, 'lxml')
-            # tables = soup.findAll('table')
-            # aratable = [i for i in tables if i.get('class')[0] == 'parcel-aratable-style'][0]
-            # for td in aratable.find_all('td'):
-            #     if td.text == '':
-            #         td.decompose()
-            #
-            #     if td.text.count('.)'):
-            #         td.attrs['colspan'] = 3
-
             df_sums_html.append(all_in_one_rendered_html)
-
-            # for none rapor malik
-            try:
-                # todo: debugging
-                none_malik_df = df_summary[df_summary['rapor_malik'].isnull()]
-                # none_grouped = none_malik.groupby('rapor_kullanimi')
-                none_df_grouped = pd.DataFrame({'PARSEL SAYISI': none_malik_df.count()['AlanBuyuklugu'],
-                                                'ALAN TOPLAMI': none_malik_df.sum()['AlanBuyuklugu']})
-
-                none_toplam = none_df_grouped.sum(numeric_only=True, axis=0)['ALAN TOPLAMI']
-
-                none_malik_df.loc['Genel Toplam'] = none_df_grouped.sum(numeric_only=True, axis=0)
-                maliks_toplam += none_toplam
-
-                none_malik_df.index.names = ['RAPOR MALIK KAYDI YOK']
-                df_sums_html.append(none_malik_df.to_html(index=True, justify='center', classes='umut-table-style'))
-
-            except:
-                arcpy.AddWarning("Rapor icin bos kayitli malikler cikarilamadi.")
 
             # formatting
             df_detail = df_detail.loc[:, ~df_detail.columns.duplicated()]
@@ -691,6 +648,12 @@ class IcmalReportGenerator(object):
                                       'ILCE_ADI': 'İlçe Adı', 'ParselNitelik': 'Parsel Nitelik'}, inplace=True)
             df_detail['Ada No'] = df_detail['Ada No'].astype(float).map('{:,.0f}'.format)
             df_detail = self.ada_parsel_merger(df_detail)
+
+            # order columns
+            df_detail_columns = list(df_detail.columns)
+            df_detail_columns.remove('Ada Parsel')
+            df_detail_columns.insert(0, 'Ada Parsel')
+            df_detail = df_detail[[i for i in df_detail_columns]]
 
             # number formatting for df detail
             df_detail['Hisse Alanı (m2)'] = df_detail['Hisse Alanı (m2)'].astype(float).map('{:,.2f}'.format)
