@@ -455,6 +455,7 @@ class IcmalReportGenerator(object):
             df_detail.drop(columns=['Malik', 'Ada No', 'Parsel No'], inplace=True)
 
             df_detail = df_detail.replace('nan', '', regex=True)
+            df_summary = df_summary.replace('nan', '', regex=True)
 
             # sorting columns
             new_sorted_columns = list(df_detail.columns)
