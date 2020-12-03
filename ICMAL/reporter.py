@@ -232,8 +232,8 @@ class IcmalReportGenerator(object):
             sys.exit(0)
 
     @staticmethod
-    def find_genel_toplam_indexes(df):
-        r_c = df.loc[df['KULLANIM AMACI'] == 'Genel Toplam']['KULLANIM AMACI'].index.tolist()
+    def find_genel_toplam_indexes(df, text='Genel Toplam'):
+        r_c = df.loc[df['KULLANIM AMACI'] == text]['KULLANIM AMACI'].index.tolist()
         return r_c
 
     @staticmethod
@@ -613,8 +613,27 @@ class IcmalReportGenerator(object):
             malik_indexes = self.find_malik_indexes(all_in_one, maliks)
             arcpy.AddMessage("Indexes has been found !")
 
+            # adding one general last summary for all df in all in one
+            genel_toplam_df = all_in_one.iloc[indexes]
+            genel_toplam_df['ALAN TOPLAMI (m²)'] = genel_toplam_df['ALAN TOPLAMI (m²)'].str.replace(',', '').astype(
+                float)
+            # toplam_parsel_sayisi = genel_toplam_df['PARSEL SAYISI'].sum()
+            # toplam_alan_toplami = genel_toplam_df['ALAN TOPLAMI (m²)'].sum()
+            genel_toplam_df = genel_toplam_df.groupby(['KULLANIM AMACI']).agg({'ALAN TOPLAMI (m²)': 'sum', 'PARSEL SAYISI': 'sum'})
+            genel_toplam_df['ALAN TOPLAMI (m²)'] = genel_toplam_df['ALAN TOPLAMI (m²)'].astype(float).map('{:,.2f}'.format)
+            genel_toplam_df.reset_index(drop=True, inplace=True)
+            genel_toplam_df['KULLANIM AMACI'] = ['ISDEMIR YERLEŞİM ALANI GENEL TOPLAM']
+
+            all_in_one = pd.concat([all_in_one, genel_toplam_df])
+            # reset index
+            all_in_one.reset_index(inplace=True, drop=True)
+
+            style_indexes = self.find_genel_toplam_indexes(all_in_one)
+            style_indexes2 = self.find_genel_toplam_indexes(all_in_one, text='ISDEMIR YERLEŞİM ALANI GENEL TOPLAM')[0]
+            style_indexes.append(style_indexes2)
+
             # all in one - ara tablo - styling
-            all_in_one_rendered = all_in_one.style.apply(lambda x: ['background: #ea6053' if x.name in indexes
+            all_in_one_rendered = all_in_one.style.apply(lambda x: ['background: #ea6053' if x.name in style_indexes
                                                                     else '' for i in x], axis=1)
             all_in_one_rendered.apply(
                 lambda x: ['colspan: 3' if x.name in malik_indexes else '' for i in x], axis=1)
@@ -637,6 +656,9 @@ class IcmalReportGenerator(object):
                                                                         'text-align': 'left'})
             all_in_one_rendered = all_in_one_rendered.apply(
                 lambda x: ['color: white' if x['KULLANIM AMACI'] == 'Genel Toplam' else '' for i in x], axis=1)
+            all_in_one_rendered = all_in_one_rendered.apply(
+                lambda x: ['color: white' if x['KULLANIM AMACI'] == 'İSDEMİR YERLEŞİM ALANI GENEL TOPLAM' else
+                           '' for i in x], axis=1)
 
             all_in_one_rendered = all_in_one_rendered.set_table_attributes(
                 'border="1" class=parcel-aratable-style')
@@ -1016,7 +1038,6 @@ class IcmalReportGenerator(object):
             df_detail['Dava Açılış Tarihi'] = df_detail['Dava Açılış Tarihi'].dt.strftime('%d-%m-%Y')
 
             # Ada Parsel
-            df_detail_kayit_sayisi = df_detail.count()['Ada No']
             df_detail['Ada No'] = df_detail['Ada No'].astype(float).map('{:.0f}'.format)
             # NOT : Parsel no coalesce
 
@@ -1056,7 +1077,7 @@ class IcmalReportGenerator(object):
 
             added_text = f"<h2 style='color:black;'>PARSEL DAVA TAKİP RAPORU</h2>" \
                          f"<hr>"
-            added_text += f"Toplam Kayıt Sayısı : {df_detail_kayit_sayisi}"
+            added_text += f"Toplam Kayıt Sayısı : {len(df_detail)}"
 
             result_html = icmal_html + 2 * "<br>" + added_text + "<br>" + df_detail_style_html
 
@@ -1078,13 +1099,14 @@ class IcmalReportGenerator(object):
             clean_fields = ["kht_tip", "SozlesmeYapilanKurulus", "Yillik_OdenecekMiktar", "OdemeFormulu",
                             "BirimBedeli", "ParaBirimi", "malik",
                             "KONUSU", "ACIKLAMA", "GUNCELDURUM", "AdaNo", "PARSELNO",
-                            "KIRA_BASLANGIC_TARIHI", "KIRA_BITIS_TARIHI", "KHTNO", "ALAN_BUYUKLUGU"]
+                            "KIRA_BASLANGIC_TARIHI", "KIRA_BITIS_TARIHI", "KHTNO", "ALAN_BUYUKLUGU", 'sozguid']
 
-            table_name = "ISD_NEW.dbo.KHT_SORGU_VW"
+            table_name = "ISD_NEW.dbo.KIRALAMA_ICMAL_VW"
             # odeme_table_name = 'ISD_NEW.dbo.ODEME'
-
+            # odeme_fields = ['OdemeTarihi', 'OdemeTutari', 'Iliskili_KN', 'GlobalID']
             df_detail = self.table_to_data_frame(table_name)
-            # df_odeme = self.table_to_data_frame(odeme_table_name)
+            # df_odeme = self.table_to_data_frame(odeme_table_name,
+            #                                     input_fields=odeme_fields, donotdelete=odeme_fields)
             # df_detail = df_detail.join(df_odeme, how='left', on=[''])
 
             df_detail = df_detail[[i for i in df_detail.columns if i in clean_fields]]
