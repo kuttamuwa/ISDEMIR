@@ -531,8 +531,6 @@ class IcmalReportGenerator(object):
 
         elif icmal_type == report_choice_list[2]:
             # Parsel Icmali
-            # TODO: ARA TABLONUN EN ALTINA TOPLAM ALAN SAYISI VE TOPLAM M2 EKLENECEK
-
             arcpy.AddMessage("Parsel Icmali secildi")
             icmal_html = base_html_head.replace("{report_title}", "Parsel Icmali ")
             name = "parsel_icmal_report.html"
@@ -544,10 +542,8 @@ class IcmalReportGenerator(object):
             clean_fields = ["OBJECTID", "Aciklama", "PaftaNo", "ParselUavt_Kodu", "Mahalle_Koy",
                             "HisseOrani", "oeb_durumu", "SHAPE.STArea()", "SHAPE.STLength()"]
 
-            df_detail = self.table_to_data_frame("ISD_NEW.dbo.Parsel_Geo_Icmal_Sorgu_new")
-            df_summary = self.table_to_data_frame("ISD_NEW.dbo.PARSEL_ICMALI_VW",
-                                                  input_fields=['AlanBuyuklugu', 'Eski_Parsel_ID',
-                                                                'rapor_malik', 'rapor_kullanimi', 'HisseAlani'])
+            df_summary = self.table_to_data_frame("ISD_NEW.dbo.PARSEL_ICMALI_VW")
+            df_detail = df_summary.copy()
             arcpy.AddMessage("Summary and Detail Dataframe were created")
 
             df_summary.rename(columns={'Eski_Parsel_ID': 'parselid'}, inplace=True)
@@ -568,10 +564,10 @@ class IcmalReportGenerator(object):
                 if m is not None:
                     grouped = df_sum_malik.groupby('rapor_kullanimi')
                     if m == 'ISDEMIR_PARSELLERI':
-                        df_grouped = pd.DataFrame({'PARSEL SAYISI': grouped.count()['HisseAlani'],
+                        df_grouped = pd.DataFrame({'PARSEL SAYISI': grouped.count()['GlobalID'],
                                                    'ALAN TOPLAMI': grouped.sum()['HisseAlani']})
                     else:
-                        df_grouped = pd.DataFrame({'PARSEL SAYISI': grouped.count()['AlanBuyuklugu'],
+                        df_grouped = pd.DataFrame({'PARSEL SAYISI': grouped.count()['GlobalID'],
                                                    'ALAN TOPLAMI': grouped.sum()['AlanBuyuklugu']})
 
                     df_grouped.index.names = [m]
@@ -599,8 +595,8 @@ class IcmalReportGenerator(object):
                     cnt += 1
 
             all_in_one = pd.concat(df_groups, join='inner', axis=0)
+
             # colorizing
-            # all_in_one['KULLANIM AMACI'] = all_in_one.index
             all_in_one.index.names = ['INDEX']
 
             # sorting
@@ -617,10 +613,11 @@ class IcmalReportGenerator(object):
             genel_toplam_df = all_in_one.iloc[indexes]
             genel_toplam_df['ALAN TOPLAMI (m²)'] = genel_toplam_df['ALAN TOPLAMI (m²)'].str.replace(',', '').astype(
                 float)
-            # toplam_parsel_sayisi = genel_toplam_df['PARSEL SAYISI'].sum()
-            # toplam_alan_toplami = genel_toplam_df['ALAN TOPLAMI (m²)'].sum()
-            genel_toplam_df = genel_toplam_df.groupby(['KULLANIM AMACI']).agg({'ALAN TOPLAMI (m²)': 'sum', 'PARSEL SAYISI': 'sum'})
-            genel_toplam_df['ALAN TOPLAMI (m²)'] = genel_toplam_df['ALAN TOPLAMI (m²)'].astype(float).map('{:,.2f}'.format)
+
+            genel_toplam_df = genel_toplam_df.groupby(['KULLANIM AMACI']).agg(
+                {'ALAN TOPLAMI (m²)': 'sum', 'PARSEL SAYISI': 'sum'})
+            genel_toplam_df['ALAN TOPLAMI (m²)'] = genel_toplam_df['ALAN TOPLAMI (m²)'].astype(float).map(
+                '{:,.2f}'.format)
             genel_toplam_df.reset_index(drop=True, inplace=True)
             genel_toplam_df['KULLANIM AMACI'] = ['ISDEMIR YERLEŞİM ALANI GENEL TOPLAM']
 
@@ -639,7 +636,7 @@ class IcmalReportGenerator(object):
                 lambda x: ['colspan: 3' if x.name in malik_indexes else '' for i in x], axis=1)
 
             all_in_one_rendered = all_in_one_rendered.apply(
-                lambda x: ['background: #ea6053' if x['KULLANIM AMACI'] == 'İSDEMİR YERLEŞİM ALANI GENEL TOPLAM'
+                lambda x: ['background: #ea6053' if x['KULLANIM AMACI'] == 'ISDEMIR YERLEŞİM ALANI GENEL TOPLAM'
                            else '' for i in x], axis=1)
 
             all_in_one_rendered = all_in_one_rendered.set_table_styles(
@@ -657,7 +654,7 @@ class IcmalReportGenerator(object):
             all_in_one_rendered = all_in_one_rendered.apply(
                 lambda x: ['color: white' if x['KULLANIM AMACI'] == 'Genel Toplam' else '' for i in x], axis=1)
             all_in_one_rendered = all_in_one_rendered.apply(
-                lambda x: ['color: white' if x['KULLANIM AMACI'] == 'İSDEMİR YERLEŞİM ALANI GENEL TOPLAM' else
+                lambda x: ['color: white' if x['KULLANIM AMACI'] == 'ISDEMIR YERLEŞİM ALANI GENEL TOPLAM' else
                            '' for i in x], axis=1)
 
             all_in_one_rendered = all_in_one_rendered.set_table_attributes(
@@ -673,7 +670,7 @@ class IcmalReportGenerator(object):
             df_detail.drop(columns=[i for i in df_detail.columns if i.count('other') or i.count('caller')],
                            inplace=True)
 
-            df_detail.rename(columns={'parselid': 'Parsel ID', 'AdaNo': 'Ada No',
+            df_detail.rename(columns={'Eski_Parsel_ID': 'Parsel ID', 'AdaNo': 'Ada No',
                                       'ParselNo': 'Parsel No', 'AlanBuyuklugu': 'Alan Büyüklüğü',
                                       'Kullanimsekli': 'Kullanım Şekli', 'ImarDurumu': 'İmar Durumu',
                                       'ParselMulkiyet': 'Parsel Mülkiyet',
@@ -710,7 +707,6 @@ class IcmalReportGenerator(object):
             df_detail_html = df_detail_html.set_properties(**{'width': '800px', 'height': '20px',
                                                               'text-align': 'center'})
 
-            # df_detail_html = df_detail.to_html(index=True, justify='center', classes='umut-table-style')
             arcpy.AddMessage("DF Detail html was created")
 
             result_html = icmal_html
@@ -1099,15 +1095,22 @@ class IcmalReportGenerator(object):
             clean_fields = ["kht_tip", "SozlesmeYapilanKurulus", "Yillik_OdenecekMiktar", "OdemeFormulu",
                             "BirimBedeli", "ParaBirimi", "malik",
                             "KONUSU", "ACIKLAMA", "GUNCELDURUM", "AdaNo", "PARSELNO",
-                            "KIRA_BASLANGIC_TARIHI", "KIRA_BITIS_TARIHI", "KHTNO", "ALAN_BUYUKLUGU", 'sozguid']
+                            "KIRA_BASLANGIC_TARIHI", "KIRA_BITIS_TARIHI", "KHTNO", "ALAN_BUYUKLUGU", 'sozguid',
+                            'OdemeTarihi', 'OdemeTutari']
 
             table_name = "ISD_NEW.dbo.KIRALAMA_ICMAL_VW"
-            # odeme_table_name = 'ISD_NEW.dbo.ODEME'
-            # odeme_fields = ['OdemeTarihi', 'OdemeTutari', 'Iliskili_KN', 'GlobalID']
-            df_detail = self.table_to_data_frame(table_name)
-            # df_odeme = self.table_to_data_frame(odeme_table_name,
-            #                                     input_fields=odeme_fields, donotdelete=odeme_fields)
-            # df_detail = df_detail.join(df_odeme, how='left', on=[''])
+            odeme_table_name = 'ISD_NEW.dbo.ODEME'
+            odeme_fields = ['OdemeTarihi', 'OdemeTutari', 'Iliskili_KN', 'GlobalID']
+            df_detail = self.table_to_data_frame(table_name, donotdelete=['sozguid'])
+            df_odeme = self.table_to_data_frame(odeme_table_name,
+                                                input_fields=odeme_fields, donotdelete=odeme_fields)
+            # needed to be deal first before join
+            df_odeme['OdemeTarihi'] = pd.to_datetime(df_odeme['OdemeTarihi'],
+                                                     errors='coerce').dt.strftime('%d-%m-%Y')
+
+            df_odeme = df_odeme.sort_values('OdemeTarihi').drop_duplicates(subset=['Iliskili_KN'], keep='last')
+
+            df_detail = pd.merge(df_detail, df_odeme, left_on='sozguid', right_on='Iliskili_KN', how='left')
 
             df_detail = df_detail[[i for i in df_detail.columns if i in clean_fields]]
 
@@ -1121,14 +1124,16 @@ class IcmalReportGenerator(object):
                                       'OdemeFormulu': 'Ödeme Formülü',
                                       'BirimBedeli': 'Birim Bedeli', 'ParaBirimi': 'Para Birimi',
                                       'ALAN_BUYUKLUGU': 'İzin Yüzölçümü (m²)', 'ACIKLAMA': 'Açıklama',
-                                      'KONUSU': 'Konusu'},
+                                      'KONUSU': 'Konusu', 'OdemeTarihi': 'Ödeme Tarihi', 'OdemeTutari': 'Ödeme Tutarı'},
                              inplace=True)
+            df_detail.drop(columns=['Iliskili_KN', 'GlobalID', 'sozguid'], inplace=True, errors='ignore')
 
             # date formatting due to arcpy
             df_detail['Kira Başlangıç Tarihi'] = pd.to_datetime(df_detail['Kira Başlangıç Tarihi'],
                                                                 errors='coerce').dt.strftime('%d-%m-%Y')
             df_detail['Kira Bitiş Tarihi'] = pd.to_datetime(df_detail['Kira Bitiş Tarihi'],
                                                             errors='coerce').dt.strftime('%d-%m-%Y')
+            df_detail['Ödeme Tutarı'] = df_detail['Ödeme Tutarı'].astype(float).map('{:,.2f}'.format)
 
             df_detail.index.names = ['rowid']
 
@@ -1156,7 +1161,7 @@ class IcmalReportGenerator(object):
             df_detail = self.make_column_nth_order(df_detail, 'Ada Parsel', order=1)
 
             # sorting
-            df_detail.sort_values(['Kira İzin Durumu', 'KHT No'], inplace=True)
+            df_detail.sort_values(['KHT No', 'Kira İzin Durumu'], inplace=True)
 
             # concat
             df_detail['Birim Bedeli'] = df_detail['Birim Bedeli'] + ' ' + df_detail['Para Birimi']
