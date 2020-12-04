@@ -181,7 +181,8 @@ class IcmalReportGenerator(object):
                          "ykibedinimyontemi", "edinimyontemiaciklama", "ykibaciklama", "YapiRuhsatBasvuruTarihi",
                          "yapi_durum", "ruhsat_aciklama", "yapi_ruhsat_kapsami", "yapi_id", "mahalle_koy",
                          "yapi_mulkiyeti", "malik", "tip", "alttip", "VRH_Kurum", "Yapi_Durumu", "odemetipi", "Kurulus",
-                         "OdemeTarihi", "OdemeYili", "OdemeTutari", "OdemeTutarBirimi", "odemeaciklama"]
+                         "OdemeTarihi", "OdemeYili", "OdemeTutari", "OdemeTutarBirimi", "odemeaciklama", "created_user",
+                         "created_date", "last_edited_user", "last_edited_date", "SDE_STATE_ID"]
 
         if kwargs.get('donotdelete'):
             static_fields = [i for i in static_fields if i not in kwargs['donotdelete']]
@@ -364,7 +365,7 @@ class IcmalReportGenerator(object):
 
             # son yazilar
             added_text = f"<h2 style='color: blue;'>İSDEMİR YAPI LİSTESİ</h2>" \
-                         f"Toplam Kayıt Sayısı : {df_detail.count()['Ada No']}"
+                         f"Toplam Kayıt Sayısı : {df_detail.count()['Sıra No']}"
             arcpy.AddMessage("Columns renaming completed")
 
             # formatting records
@@ -375,6 +376,7 @@ class IcmalReportGenerator(object):
             # Ada Parsel issue
             df_detail['Ada No'] = df_detail['Ada No'].astype(float).map('{:,.0f}'.format)
             df_detail['Ruhsat No'] = df_detail['Ruhsat No'].astype(float).map('{:,.0f}'.format)
+            df_detail['Yapı ID'] = df_detail['Yapı ID'].astype(float).map('{:,.0f}'.format)
             df_detail['Toplam İnşaat Alanı (m²)'] = df_detail['Toplam İnşaat Alanı (m²)'].astype(float).map(
                 '{:,.2f}'.format)
 
@@ -525,8 +527,10 @@ class IcmalReportGenerator(object):
             last_added_text = f"<h1 style='color:black;'>Yapı Emlak Vergi Listesi</h1>" \
                               f"<hr>"
             last_added_text += f"Toplam Kayıt Sayısı : {df_detail_toplam_kayit}"
+            df_sum_html = df_sum_html.hide_index().render()
+            df_sum_html = df_sum_html.replace('nan', 'Kayıt Yok')
 
-            result_html = icmal_html + 2 * "<br>" + df_sum_html.hide_index().render() + 4 * "<br>" \
+            result_html = icmal_html + 2 * "<br>" + df_sum_html + 4 * "<br>" \
                           + last_added_text + df_detail_style_html
 
         elif icmal_type == report_choice_list[2]:
@@ -540,7 +544,8 @@ class IcmalReportGenerator(object):
             icmal_html += added_first_text
 
             clean_fields = ["OBJECTID", "Aciklama", "PaftaNo", "ParselUavt_Kodu", "Mahalle_Koy",
-                            "HisseOrani", "oeb_durumu", "SHAPE.STArea()", "SHAPE.STLength()"]
+                            "HisseOrani", "oeb_durumu", "SHAPE.STArea()", "SHAPE.STLength()", "GlobalID",
+                            "OEB_KN"]
 
             df_summary = self.table_to_data_frame("ISD_NEW.dbo.PARSEL_ICMALI_VW")
             df_detail = df_summary.copy()
@@ -672,11 +677,12 @@ class IcmalReportGenerator(object):
 
             df_detail.rename(columns={'Eski_Parsel_ID': 'Parsel ID', 'AdaNo': 'Ada No',
                                       'ParselNo': 'Parsel No', 'AlanBuyuklugu': 'Alan Büyüklüğü',
-                                      'Kullanimsekli': 'Kullanım Şekli', 'ImarDurumu': 'İmar Durumu',
+                                      'KullanimSekli': 'Kullanım Şekli', 'ImarDurumu': 'İmar Durumu',
                                       'ParselMulkiyet': 'Parsel Mülkiyet',
                                       'rapor_malik': 'Rapor Malik', 'rapor_kullanimi': 'Rapor Kullanımı',
                                       'ILCE_ADI': 'İlçe Adı', 'ParselNitelik': 'Parsel Nitelik',
-                                      'HisseAlani': 'Hisse Alanı (m2)'}, inplace=True)
+                                      'HisseAlani': 'Hisse Alanı (m2)', 'SerhBeyanDurumu': 'Şerh Beyan Durumu'},
+                             inplace=True)
             df_detail['Ada No'] = df_detail['Ada No'].astype(float).map('{:,.0f}'.format)
             df_detail = self.ada_parsel_merger(df_detail)
 
