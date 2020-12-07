@@ -270,7 +270,6 @@ class IcmalReportGenerator(object):
 
         if icmal_type == report_choice_list[0]:
             # Yapi Icmali: Yapi_Geo_Icmal_Sorgusu (Detay) - Summary
-
             arcpy.AddMessage("Yapi Icmali secildi")
             icmal_html = base_html_head.replace("{report_title}", "Yerlesim Alani Genel Arazi Icmali (Yapi) ")
             name = "yapi_icmali.html"
@@ -915,7 +914,6 @@ class IcmalReportGenerator(object):
 
         elif icmal_type == report_choice_list[4]:
             # Yapi Dava Takip Raporu
-
             arcpy.AddMessage("Yapi Dava Takip Raporu secildi")
             icmal_html = base_html_head.replace("{report_title}", "Yapi Dava Takip İcmali ")
             name = "yapi_dava_takip_report.html"
