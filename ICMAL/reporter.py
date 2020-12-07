@@ -1198,7 +1198,8 @@ class IcmalReportGenerator(object):
                 ]
             )
 
-            df_detail_html = df_detail_html.hide_index().render().replace('nan', '').replace('None', '')
+            df_detail_html = df_detail_html.hide_index().render().replace('nan', '')\
+                .replace('None', '').replace('NaT', '')
 
             added_text = f"Toplam Kayıt Sayısı : {len(df_detail)}"
 
