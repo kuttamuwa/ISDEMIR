@@ -223,12 +223,6 @@ icmal_html += added_first_text
 df_detail = table_to_data_frame('ISD_NEW.dbo.Yapi_Geo_Icmal_Sorgusu',
                                 donotdelete=['ykibedinimyontemi'])
 df_detail = df_detail.fillna('Kayit Yok')
-
-# df_summary_test = table_to_data_frame('ISD_NEW.dbo.YAPI_GEO_ICMAL_SUMMARY_VW')
-# pd.crosstab(df_summary_test['Malik'], columns=[df_summary_test['oeb_durumu'],
-#                                                df_summary_test['RuhsatGuncelDurum'],
-#                                                df_summary_test['GuncelDurum']], fill_value=0, dropna=False)
-
 df_detail.drop(['Yapi_ID'], inplace=True, errors='ignore')
 
 # datetime formatting
@@ -256,6 +250,7 @@ df_detail.rename(columns={'oeb_durumu': 'OEB Durumu', 'RuhsatGuncelDurum': 'Ruhs
 # Step 1
 # oeb icindekiler alinir, gereksiz sutunlar silinir
 df_summary = df_detail.copy()
+df_detail = df_detail.replace('Kayit Yok', np.nan)
 
 # imar barışı tricking
 # df_summary.loc[df_summary['YKIB Edinim Yöntemi'] == 'İmar Barışı', 'YKIB Durum'] = 'İmar Barışı'
@@ -309,7 +304,6 @@ df_detail.rename(columns={'YapiAdi': 'Yapı Adı', 'Yapi_No': 'Yapı No',
 # index to column
 df_detail.reset_index(inplace=True)
 df_detail.rename(columns={'rowid': 'Sıra No'}, inplace=True)
-df_detail['Sıra No'] = np.arange(df_detail.shape[0])
 
 # son yazilar
 added_text = f"<h2 style='color: blue;'>İSDEMİR YAPI LİSTESİ</h2>" \
@@ -331,6 +325,7 @@ df_detail['Toplam İnşaat Alanı (m²)'] = df_detail['Toplam İnşaat Alanı (m
 df_detail = ada_parsel_merger(df_detail)
 df_detail.sort_values(['Yapı No'], inplace=True)
 df_detail.drop(columns=['Ada No', 'Parsel No'], inplace=True)
+df_detail['Sıra No'] = np.arange(start=1, stop=len(df_detail))
 
 # Ada Parsel to leftest
 df_detail = make_column_nth_order(df_detail, 'Ada Parsel', order=4)

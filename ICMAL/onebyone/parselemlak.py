@@ -116,7 +116,6 @@ pd.options.display.float_format = '{:,.3f}'.format
 pd.set_option('display.width', 100)
 
 
-@staticmethod
 def column_cleaner(df, *additional_fields, **kwargs):
     static_fields = ["yapi_oid", "OBJECTID", "shape", "SHAPE", "SHAPE.STArea()", "SHAPE.STLength()", "rowid",
                      "shape.STArea()", "shape.STLength()",
@@ -144,7 +143,7 @@ def column_cleaner(df, *additional_fields, **kwargs):
     return df
 
 
-def table_to_data_frame(self, in_table, fix_fields=True, input_fields=None, where_clause=None, **kwargs):
+def table_to_data_frame(in_table, fix_fields=True, input_fields=None, where_clause=None, **kwargs):
     """Function will convert an arcgis table into a pandas dataframe with an object ID index, and the selected
     input fields using an arcpy.da.SearchCursor."""
     try:
@@ -208,9 +207,13 @@ def make_column_nth_order(df, column_name, order):
     return df
 
 
+# Yapi Icmali: Yapi_Geo_Icmal_Sorgusu (Detay) - Summary
+# Sıra noyu tepeye almayı burada başardık
+workspace = r"C:\YAYIN\cbsarcgisew.sde"
+env.workspace = workspace
+
 # Parsel Emlak Vergisi Icmali
-# TODO: Toplam m2 kısımlarında decimal konulacak
-# TODO: Genel Toplam -> Adet ve m2 konulacak
+pd.options.display.float_format = "{:,.2f}".format
 
 arcpy.AddMessage("Parsel Emlak Vergisi Icmali secildi")
 icmal_html = base_html_head.replace("{report_title}", "İsdemir Parsel Emlak Vergisi Icmali")
@@ -271,6 +274,7 @@ df_summary = df_summary.replace(np.nan, 0, regex=True)
 # summary rows
 df_summary.loc['Genel Toplam'] = df_summary.sum(numeric_only=True, axis=0)
 df_summary.loc[:, 'Genel Toplam'] = df_summary.sum(numeric_only=True, axis=1)
+df_summary = df_summary.T.groupby(level=[0, 1]).sum()
 
 # Ada Parsel
 df_detail['Ada No'] = df_detail['Ada No'].astype(float, errors='ignore').map('{:.0f}'.format)
@@ -292,6 +296,7 @@ df_detail.drop(columns=['Ada No', 'Parsel No'], inplace=True)
 
 # Ada Parsel to leftest
 df_detail = make_column_nth_order(df_detail, 'Ada Parsel', order=1)
+df_detail['Sıra No'] = np.arange(start=1, stop=len(df_detail) + 1)
 
 # export html
 df_detail_style = df_detail.style

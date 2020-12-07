@@ -270,7 +270,6 @@ class IcmalReportGenerator(object):
 
         if icmal_type == report_choice_list[0]:
             # Yapi Icmali: Yapi_Geo_Icmal_Sorgusu (Detay) - Summary
-            # Sıra noyu tepeye almayı burada başardık
 
             arcpy.AddMessage("Yapi Icmali secildi")
             icmal_html = base_html_head.replace("{report_title}", "Yerlesim Alani Genel Arazi Icmali (Yapi) ")
@@ -385,7 +384,7 @@ class IcmalReportGenerator(object):
             df_detail = self.ada_parsel_merger(df_detail)
             df_detail.sort_values(['Yapı No'], inplace=True)
             df_detail.drop(columns=['Ada No', 'Parsel No'], inplace=True)
-            df_detail['Sıra No'] = np.arange(start=1, stop=len(df_detail))
+            df_detail['Sıra No'] = np.arange(start=1, stop=len(df_detail) + 1)
 
             # Ada Parsel to leftest
             df_detail = self.make_column_nth_order(df_detail, 'Ada Parsel', order=4)
@@ -469,7 +468,7 @@ class IcmalReportGenerator(object):
             df_detail = df_detail.reindex(new_sorted_columns, axis=1)
 
             # resetting index
-            df_detail['Sıra No'] = np.arange(start=1, stop=len(df_detail))
+            df_detail['Sıra No'] = np.arange(start=1, stop=len(df_detail) + 1)
 
             # Ada Parsel to leftest
             df_detail = self.make_column_nth_order(df_detail, 'Ada Parsel', 3)
@@ -705,7 +704,7 @@ class IcmalReportGenerator(object):
             # delete index row
             df_detail.reset_index(inplace=True)
             df_detail.rename(columns={'rowid': 'Sıra No'}, inplace=True)
-            df_detail['Sıra No'] = np.arange(start=1, stop=len(df_detail))
+            df_detail['Sıra No'] = np.arange(start=1, stop=len(df_detail) + 1)
 
             # export html
             df_detail_html = df_detail.style
@@ -778,8 +777,7 @@ class IcmalReportGenerator(object):
 
         elif icmal_type == report_choice_list[3]:
             # Parsel Emlak Vergisi Icmali
-            # TODO: Toplam m2 kısımlarında decimal konulacak
-            # TODO: Genel Toplam -> Adet ve m2 konulacak
+            pd.options.display.float_format = "{:,.2f}".format
 
             arcpy.AddMessage("Parsel Emlak Vergisi Icmali secildi")
             icmal_html = base_html_head.replace("{report_title}", "İsdemir Parsel Emlak Vergisi Icmali")
@@ -840,6 +838,7 @@ class IcmalReportGenerator(object):
             # summary rows
             df_summary.loc['Genel Toplam'] = df_summary.sum(numeric_only=True, axis=0)
             df_summary.loc[:, 'Genel Toplam'] = df_summary.sum(numeric_only=True, axis=1)
+            df_summary = df_summary.T.groupby(level=[0, 1]).sum()
 
             # Ada Parsel
             df_detail['Ada No'] = df_detail['Ada No'].astype(float, errors='ignore').map('{:.0f}'.format)
@@ -861,7 +860,7 @@ class IcmalReportGenerator(object):
 
             # Ada Parsel to leftest
             df_detail = self.make_column_nth_order(df_detail, 'Ada Parsel', order=1)
-            df_detail['Sıra No'] = np.arange(start=1, stop=len(df_detail))
+            df_detail['Sıra No'] = np.arange(start=1, stop=len(df_detail) + 1)
 
             # export html
             df_detail_style = df_detail.style
@@ -968,7 +967,7 @@ class IcmalReportGenerator(object):
 
             # nan
             df_detail = df_detail.replace(np.nan, '', regex=True)
-            df_detail['Sıra No'] = np.arange(start=1, stop=len(df_detail))
+            df_detail['Sıra No'] = np.arange(start=1, stop=len(df_detail) + 1)
 
             # export html
             df_detail_style = df_detail.style
@@ -1053,7 +1052,7 @@ class IcmalReportGenerator(object):
 
             # Ada Parsel to leftest
             df_detail = self.make_column_nth_order(df_detail, 'Ada Parsel', order=1)
-            df_detail['Sıra No'] = np.arange(start=1, stop=len(df_detail))
+            df_detail['Sıra No'] = np.arange(start=1, stop=len(df_detail) + 1)
 
             df_detail_style = df_detail.style
             df_detail_style = df_detail_style.set_properties(**{'width': '600px', 'text-align': 'left'})
@@ -1172,7 +1171,7 @@ class IcmalReportGenerator(object):
             df_detail.drop(columns=['Para Birimi'], inplace=True)
 
             # resetting index
-            df_detail['Sıra No'] = np.arange(start=1, stop=len(df_detail))
+            df_detail['Sıra No'] = np.arange(start=1, stop=len(df_detail) + 1)
 
             # export html
             df_detail_html = df_detail.style
