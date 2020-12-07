@@ -325,8 +325,10 @@ df_detail_style = df_detail_style.apply(
 df_detail_style_html = df_detail_style.hide_index().render()
 df_detail_style_html = df_detail_style_html.replace('None', '')
 
-# 00 issue
-pd.set_option("display.precision", 2)
+# formatting
+df_summary_columns = list(df_summary.columns)
+for col in df_summary_columns:
+    df_summary[col] = df_detail[col].astype(float).map('{:,.2f}'.format)
 
 # to html
 df_sum_html = df_summary.style
@@ -342,3 +344,8 @@ added_text += f"Toplam Kayıt Sayısı : {len(df_detail)}"
 
 result_html = icmal_html + 2 * "<br>" + df_sum_html.render() + 4 * "<br>" \
               + added_text + "<br>" + df_detail_style_html
+
+with open(r"C:\Users\sozeren.mapit\Desktop\UMUT\test2.xlsx", 'w', encoding='utf-8') as writer:
+    writer.write(result_html)
+
+writer.close()

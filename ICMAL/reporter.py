@@ -777,6 +777,11 @@ class IcmalReportGenerator(object):
 
         elif icmal_type == report_choice_list[3]:
             # Parsel Emlak Vergisi Icmali
+
+            workspace = r"C:\YAYIN\cbsarcgisew.sde"
+            env.workspace = workspace
+
+            # Parsel Emlak Vergisi Icmali
             pd.options.display.float_format = "{:,.2f}".format
 
             arcpy.AddMessage("Parsel Emlak Vergisi Icmali secildi")
@@ -889,8 +894,10 @@ class IcmalReportGenerator(object):
             df_detail_style_html = df_detail_style.hide_index().render()
             df_detail_style_html = df_detail_style_html.replace('None', '')
 
-            # 00 issue
-            pd.set_option("display.precision", 2)
+            # formatting
+            df_summary_columns = list(df_summary.columns)
+            for col in df_summary_columns:
+                df_summary[col] = df_summary[col].astype(float).map('{:,.2f}'.format)
 
             # to html
             df_sum_html = df_summary.style
