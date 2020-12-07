@@ -777,7 +777,6 @@ class IcmalReportGenerator(object):
 
         elif icmal_type == report_choice_list[3]:
             # Parsel Emlak Vergisi Icmali
-
             workspace = r"C:\YAYIN\cbsarcgisew.sde"
             env.workspace = workspace
 
