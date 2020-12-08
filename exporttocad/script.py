@@ -22,6 +22,8 @@ import zipfile
 import arcpy
 from sys import argv
 
+arcpy.env.outputCoordinateSystem = arcpy.SpatialReference(2322)
+
 input_feature = arcpy.GetParameterAsText(0)
 out_feature = arcpy.GetParameterAsText(1)
 cad_type = arcpy.GetParameterAsText(2)

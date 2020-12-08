@@ -1117,7 +1117,7 @@ class IcmalReportGenerator(object):
             # needed to be deal first before join
             df_odeme['OdemeTarihi'] = pd.to_datetime(df_odeme['OdemeTarihi'])
 
-            df_odeme = df_odeme.sort_values('OdemeTarihi', ascending=False).drop_duplicates(subset=['Iliskili_KN'],
+            df_odeme = df_odeme.sort_values('OdemeTarihi', ascending=True).drop_duplicates(subset=['Iliskili_KN'],
                                                                                             keep='last')
 
             df_detail = pd.merge(df_detail, df_odeme, left_on='sozguid', right_on='Iliskili_KN', how='left')
