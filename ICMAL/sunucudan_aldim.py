@@ -1139,6 +1139,9 @@ class IcmalReportGenerator(object):
                                                                 errors='coerce').dt.strftime('%d-%m-%Y')
             df_detail['Kira Bitiş Tarihi'] = pd.to_datetime(df_detail['Kira Bitiş Tarihi'],
                                                             errors='coerce').dt.strftime('%d-%m-%Y')
+
+            df_detail['Ödeme Tarihi'] = pd.to_datetime(df_detail['Ödeme Tarihi']).dt.strftime('%d-%m-%Y')
+
             df_detail['Ödeme Tutarı'] = df_detail['Ödeme Tutarı'].astype(float).map('{:,.2f}'.format)
 
             df_detail.index.names = ['rowid']

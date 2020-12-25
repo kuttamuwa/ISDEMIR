@@ -277,7 +277,7 @@ class IcmalReportGenerator(object):
                                f"<hr>"
             icmal_html += added_first_text
 
-            df_detail = self.table_to_data_frame('ISD_NEW.dbo.Yapi_Geo_Icmal_Sorgusu',
+            df_detail = self.table_to_data_frame('Yapi_Geo_Icmal_Sorgusu',
                                                  donotdelete=['ykibedinimyontemi'])
             df_detail = df_detail.fillna('Kayit Yok')
             df_detail.drop(['Yapi_ID'], inplace=True, errors='ignore')
@@ -410,8 +410,8 @@ class IcmalReportGenerator(object):
                                f"<hr>"
             icmal_html += added_first_text
 
-            df_detail = self.table_to_data_frame("ISD_NEW.dbo.YAPI_EMLAK_ICMAL_VW")
-            df_summary = self.table_to_data_frame("ISD_NEW.dbo.YAPI_EML_ICMAL_VW")
+            df_detail = self.table_to_data_frame("YAPI_EMLAK_ICMAL_VW")
+            df_summary = self.table_to_data_frame("YAPI_EML_ICMAL_VW")
 
             df_summary.loc['Genel Toplam'] = df_summary.sum(numeric_only=True, axis=0)
             df_summary = df_summary.replace(np.nan, 'Genel Toplam', regex=True)
@@ -546,7 +546,7 @@ class IcmalReportGenerator(object):
                             "HisseOrani", "oeb_durumu", "SHAPE.STArea()", "SHAPE.STLength()", "GlobalID",
                             "OEB_KN"]
 
-            df_summary = self.table_to_data_frame("ISD_NEW.dbo.PARSEL_ICMALI_VW")
+            df_summary = self.table_to_data_frame("PARSEL_ICMALI_VW")
             df_detail = df_summary.copy()
             arcpy.AddMessage("Summary and Detail Dataframe were created")
 
@@ -718,7 +718,7 @@ class IcmalReportGenerator(object):
             result_html = icmal_html
 
             # mini table
-            mini_df = self.table_to_data_frame('ISD_NEW.dbo.PARSEL_ICMAL_MINI_VW')
+            mini_df = self.table_to_data_frame('PARSEL_ICMAL_MINI_VW')
             mini_df.rename(columns={'rowid': 'INDEX', 'ParselNo': 'Veri Adı',
                                     }, inplace=True)
 
@@ -782,7 +782,7 @@ class IcmalReportGenerator(object):
             icmal_html = base_html_head.replace("{report_title}", "İsdemir Parsel Emlak Vergisi Icmali")
             name = "parsel_emlak_vergisi_icmal_report.html"
 
-            # table_name = "ISD_NEW.dbo.Parsel_Eml_Od_Icmal_Sorgusu"
+            # table_name = "Parsel_Eml_Od_Icmal_Sorgusu"
             table_name = "ISD_NEW.DBO.ParselEmlakIcmal_VW"
 
             clean_fields = ["OBJECTID", "Eski_Parsel_ID", "Aciklama", "AlanBuyuklugu", "KullanimSekli", "ImarDurumu",
@@ -816,6 +816,8 @@ class IcmalReportGenerator(object):
 
             df_detail['Arsa Birim Bedeli'] = df_detail['Arsa Birim Bedeli'].astype(float).map('{:,.2f}'.format)
 
+            df_detail['Hisse Alanı (m2)'] = df_detail['Hisse Alanı (m2)'].fillna(0)
+
             # sum
             df_sum = pd.pivot_table(df_detail, index=['İlçe Adı'],
                                     values=['Hisse Alanı (m2)'], aggfunc=['sum'], columns=['Emlak Vergisi Durumu'])
@@ -836,7 +838,7 @@ class IcmalReportGenerator(object):
 
             # summary rows
             df_summary.loc['Genel Toplam'] = df_summary.sum(numeric_only=True, axis=0)
-            df_summary.loc[:, 'Genel Toplam'] = df_summary.sum(numeric_only=True, axis=1)
+            # df_summary.loc[:, 'Genel Toplam'] = df_summary.sum(numeric_only=True, axis=1)
             df_summary = df_summary.T.groupby(level=[0, 1]).sum()
 
             # Ada Parsel
@@ -921,7 +923,7 @@ class IcmalReportGenerator(object):
                             "Unite", "YapiSinifi", "Malik", "rowid", "DavaDegerBirimi", "SHAPE.STArea()",
                             "SHAPE.STLength()"]
 
-            df_detail = self.table_to_data_frame('ISD_NEW.dbo.Yapi_Geo_HK_Icmal_Sorgu')
+            df_detail = self.table_to_data_frame('Yapi_Geo_HK_Icmal_Sorgu')
             df_detail = df_detail[[i for i in df_detail.columns if i not in clean_fields]]
             arcpy.AddMessage("Detail dataframe was created")
 
@@ -1016,7 +1018,7 @@ class IcmalReportGenerator(object):
                             "ParselMulkiyet", "Malik", "parselaciklama", "davadegeribirimi", "rowid",
                             "shape.STArea()", "shape.STLength()"]
 
-            df_detail = self.table_to_data_frame("ISD_NEW.dbo.Parsel_Geo_HK_Icmal_Sorgusu")
+            df_detail = self.table_to_data_frame("Parsel_Geo_HK_Icmal_Sorgusu")
             df_detail = df_detail[[i for i in df_detail.columns if i not in clean_fields]]
 
             # formatting
@@ -1104,17 +1106,15 @@ class IcmalReportGenerator(object):
                             "KIRA_BASLANGIC_TARIHI", "KIRA_BITIS_TARIHI", "KHTNO", "ALAN_BUYUKLUGU", 'sozguid',
                             'OdemeTarihi', 'OdemeTutari']
 
-            table_name = "ISD_NEW.dbo.KIRALAMA_ICMAL_VW"
-            odeme_table_name = 'ISD_NEW.dbo.ODEME'
-            odeme_fields = ['OdemeTarihi', 'OdemeTutari', 'Iliskili_KN', 'GlobalID']
+            table_name = "KIRALAMA_ICMAL_VW"
+            odeme_table_name = 'ODEME'
+            odeme_fields = ['OdemeTarihi', 'OdemeTutari', 'Iliskili_KN', 'GlobalID', 'OdemeYili']
             df_detail = self.table_to_data_frame(table_name, donotdelete=['sozguid'])
             df_odeme = self.table_to_data_frame(odeme_table_name,
                                                 input_fields=odeme_fields, donotdelete=odeme_fields)
-            # needed to be deal first before join
-            df_odeme['OdemeTarihi'] = pd.to_datetime(df_odeme['OdemeTarihi'])
 
-            df_odeme = df_odeme.sort_values('OdemeTarihi', ascending=True).drop_duplicates(subset=['Iliskili_KN'],
-                                                                                           keep='last')
+            df_odeme = df_odeme.sort_values('OdemeTarihi', ascending=True, na_position='first').drop_duplicates(
+                subset=['Iliskili_KN'], keep='last')
 
             df_detail = pd.merge(df_detail, df_odeme, left_on='sozguid', right_on='Iliskili_KN', how='left')
 
@@ -1139,6 +1139,9 @@ class IcmalReportGenerator(object):
                                                                 errors='coerce').dt.strftime('%d-%m-%Y')
             df_detail['Kira Bitiş Tarihi'] = pd.to_datetime(df_detail['Kira Bitiş Tarihi'],
                                                             errors='coerce').dt.strftime('%d-%m-%Y')
+            df_detail['Ödeme Tarihi'] = pd.to_datetime(df_detail['Ödeme Tarihi'], errors='coerce',
+                                                       ).dt.strftime('%d-%m-%Y')
+
             df_detail['Ödeme Tutarı'] = df_detail['Ödeme Tutarı'].astype(float).map('{:,.2f}'.format)
 
             df_detail.index.names = ['rowid']
